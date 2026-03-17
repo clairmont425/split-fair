@@ -1,0 +1,25 @@
+name: rent_split
+description: Fair rent splitting calculator for roommates.
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  share_plus: ^7.2.1
+  pdf: ^3.10.8
+  printing: ^5.12.0
+  in_app_purchase: ^3.1.13
+  flutter_animate: ^4.5.0
+  google_fonts: ^6.1.0
+  uuid: ^4.3.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
