@@ -83,7 +83,7 @@ class _ScoreBreakdownState extends State<ScoreBreakdown> {
       items.add(('Floor ${room.floorLevel} bonus', bonus));
     }
     items.add(('Natural light (${room.naturalLightScore.toInt()}/10)', room.naturalLightScore * 3));
-    items.add(('Noise level (${room.noiseScore.toInt()}/10)', room.noiseScore * 2));
+    items.add(('Quietness (${room.noiseScore.toInt()}/10)', room.noiseScore * 2));
     items.add(('Storage space (${room.storageScore.toInt()}/10)', room.storageScore * 1.5));
     return items;
   }

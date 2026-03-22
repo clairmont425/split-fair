@@ -130,8 +130,105 @@ Split Fair. The algorithm your roommates will actually agree to.
 
 ### Keywords (ASO)
 ```
-rent split, roommate calculator, fair rent, rent divider, room split,
-apartment split, roommate app, rent calculator, fair split, room calculator
+rent split,roommate,fair rent,rent calculator,bill splitter,room rent,share rent,roomies,housing
+```
+*(96/100 chars — no spaces after commas, Apple ignores them and they waste characters)*
+
+---
+
+## Android Play Store Listing
+
+### Short Description (80 chars max)
+```
+Fair rent splits based on room size, light, and features. Zero arguments.
+```
+*(74/80 chars)*
+
+### Full Description
+```
+SPLIT FAIR — Fair Rent for Every Room
+
+Stop guessing. Stop arguing. Get the number everyone can actually agree on.
+
+Split Fair calculates fair rent splits using a transparent scoring algorithm — not just equal splits or rough percentages. Every point is explained. Every feature counts.
+
+──────────────────────────────
+HOW IT WORKS
+──────────────────────────────
+
+Each room earns points:
+• Square footage (every sqft = 1 pt)
+• Private bathroom (+40 pts)
+• Parking spot (+30 pts)
+• Balcony or patio (+20 pts)
+• Walk-in closet (+15 pts)
+• A/C unit (+10 pts)
+
+Plus quality sliders for natural light, noise level, and storage — each weighted and explained.
+
+Your rent splits by the exact proportion of each room's score. Fair. Defensible. Undeniable.
+
+──────────────────────────────
+FEATURES
+──────────────────────────────
+
+✓ Up to 6 rooms per calculation
+✓ Live score breakdown — updates as you adjust
+✓ Animated results with visual breakdown
+✓ "Why these numbers?" transparency card
+✓ Share results as text to your roommates
+✓ Copy to clipboard
+✓ Property address saved with calculations
+✓ All data saved locally, no account needed
+
+UNLOCK PDF EXPORT — $1.99 one-time
+Get a professional, printable PDF of your full rent split with all room details. Perfect for lease negotiations or keeping records.
+
+UNLOCK SAVED CONFIGS — $1.99 one-time
+Save up to 10 room configurations and switch between them in one tap. Perfect when comparing apartments.
+
+──────────────────────────────
+WHY NOT SPLITWISE?
+──────────────────────────────
+
+Splitwise is great for ongoing expenses. Split Fair is built for one specific problem: figuring out who should pay how much for which room, when the rooms aren't equal.
+
+No transaction limits. No subscription. No account required.
+
+──────────────────────────────
+
+Split Fair. The algorithm your roommates will actually agree to.
+```
+
+### Category
+```
+Primary:   Finance
+Secondary: Lifestyle
+```
+
+### Tags / Keywords (Play Store — comma-separated, no strict limit)
+```
+rent split, roommate calculator, fair rent, rent calculator, bill splitter,
+room rent, apartment, share rent, roommates, housing, rent divider, fair split
+```
+
+### Content Rating
+```
+Everyone (no objectionable content)
+```
+
+### Feature Graphic (1024 × 500 px)
+
+Prompt for Firefly / DALL-E / Ideogram:
+```
+App feature graphic for Android Play Store, 1024x500 pixels, horizontal banner.
+Left half: dark forest green background (#0F6E56) with app name "Split Fair"
+in white Inter/sans-serif font, large and bold. Below it: tagline
+"Fair rent for every room" in smaller white text, 60% opacity.
+Right half: phone mockup showing a results screen with a green donut chart
+and three dollar amounts labeled with names (Alex, Jordan, Sam).
+Subtle geometric line pattern in the background at 10% opacity.
+No photographic elements. Clean, modern, flat design. Professional app store aesthetic.
 ```
 
 ---

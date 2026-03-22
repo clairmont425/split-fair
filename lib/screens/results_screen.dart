@@ -9,6 +9,7 @@ import '../models/pdf_service.dart';
 import '../models/split_result.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/scale_animation.dart';
 import '../widgets/score_breakdown.dart';
 import 'paywall_sheet.dart';
 
@@ -35,6 +36,9 @@ class ResultsScreen extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           children: [
             _TotalHeader(total: total, count: results.length),
+            const SizedBox(height: 16),
+            _ScaleCard(results: results)
+              .animate().fadeIn(duration: 450.ms, delay: 80.ms).slideY(begin: 0.04, end: 0),
             const SizedBox(height: 20),
             const SectionHeader(label: 'Each person pays'),
             const SizedBox(height: 8),
@@ -47,8 +51,11 @@ class ResultsScreen extends StatelessWidget {
               );
             }),
             const SizedBox(height: 20),
-            _DonutCard(results: results, total: total),
-            const SizedBox(height: 20),
+            // For 3+ rooms the donut is already shown in _ScaleCard; only show here for 2-person
+            if (results.length <= 2) ...[
+              _DonutCard(results: results, total: total),
+              const SizedBox(height: 20),
+            ],
             _BreakdownCard(results: results),
             const SizedBox(height: 20),
             _WhyCard(results: results),
@@ -174,14 +181,17 @@ class _ShareCard extends StatelessWidget {
             label: const Text('Copy'),
             style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
           )),
-          const SizedBox(width: 8),
-          Expanded(child: ElevatedButton.icon(
+        ]),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
             onPressed: onExportPdf,
             icon: Icon(isUnlocked ? Icons.picture_as_pdf_rounded : Icons.lock_rounded, size: 18),
-            label: Text(isUnlocked ? 'PDF' : 'PDF \$1.99'),
+            label: Text(isUnlocked ? 'Export PDF' : 'Export PDF  —  \$1.99'),
             style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48), backgroundColor: isUnlocked ? AppColors.primary : AppColors.accent, foregroundColor: Colors.white),
-          )),
-        ]),
+          ),
+        ),
       ]),
     ).animate().fadeIn(duration: 400.ms, delay: 300.ms);
   }
@@ -203,14 +213,72 @@ class _DonutCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('At a glance', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 20),
-        DonutChart(
-          slices: slices,
-          centerLabel: '\$${total.toStringAsFixed(0)}',
-          centerSub: 'total',
+        Row(children: [
+          Text('Rent split at a glance', style: Theme.of(context).textTheme.titleMedium),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(6)),
+            child: const Text('Weighted by room score', style: TextStyle(fontSize: 10, color: AppColors.primaryDark, fontWeight: FontWeight.w500)),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Donut ring — no built-in legend
+            DonutChart(
+              slices: slices,
+              centerLabel: '\$${total.toStringAsFixed(0)}',
+              centerSub: 'total',
+              showLegend: false,
+              size: 148,
+            ),
+            const SizedBox(width: 20),
+            // Custom legend: ● Name   $X/mo   X%
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: results.asMap().entries.map((e) {
+                  final color = AppColors.roomColors[e.key % AppColors.roomColors.length];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Row(children: [
+                      Container(
+                        width: 11, height: 11,
+                        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          e.value.room.tenant,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        Text(
+                          '\$${e.value.amount.toStringAsFixed(0)}/mo',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+                        ),
+                        Text(
+                          '${(e.value.percentage * 100).toStringAsFixed(0)}%',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                        ),
+                      ]),
+                    ]),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         ),
       ]),
     ).animate().fadeIn(duration: 400.ms, delay: 180.ms);
@@ -264,6 +332,67 @@ class _WhyCard extends StatelessWidget {
     ).animate().fadeIn(duration: 400.ms, delay: 260.ms);
   }
 }
+
+// ─── Scale of Fairness card ───────────────────────────────────────────────────
+
+class _ScaleCard extends StatelessWidget {
+  final List<SplitResult> results;
+  const _ScaleCard({required this.results});
+
+  @override
+  Widget build(BuildContext context) {
+    // 3+ rooms: show the combined donut chart instead of the balance scale
+    if (results.length > 2) {
+      final total = results.fold(0.0, (s, r) => s + r.amount);
+      return _DonutCard(results: results, total: total);
+    }
+
+    final sorted = [...results]..sort((a, b) => b.amount.compareTo(a.amount));
+    final left = sorted.first;
+    final right = sorted.last;
+    final leftIdx = results.indexOf(left);
+    final rightIdx = results.indexOf(right);
+    final leftColor = AppColors.roomColors[leftIdx % AppColors.roomColors.length];
+    final rightColor = AppColors.roomColors[rightIdx % AppColors.roomColors.length];
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Text('Scales of fairness', style: Theme.of(context).textTheme.titleMedium),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(6)),
+              child: const Text('Balanced by room score', style: TextStyle(fontSize: 10, color: AppColors.primaryDark, fontWeight: FontWeight.w500)),
+            ),
+          ]),
+          const SizedBox(height: 2),
+          Text('The heavier side pays more — weighted by room value.', style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 10),
+          JudicialScaleWidget(
+            leftPercentage: left.percentage,
+            rightPercentage: right.percentage,
+            leftLabel: left.room.tenant,
+            rightLabel: right.room.tenant,
+            leftAmount: left.amount,
+            rightAmount: right.amount,
+            leftColor: leftColor,
+            rightColor: rightColor,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
 class _PtChip extends StatelessWidget {
   final String label;

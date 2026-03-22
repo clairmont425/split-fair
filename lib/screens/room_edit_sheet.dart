@@ -35,10 +35,17 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
   void dispose() { _nameCtrl.dispose(); _tenantCtrl.dispose(); _sqftCtrl.dispose(); _floorCtrl.dispose(); super.dispose(); }
 
   void _save() {
+    final parsedSqft = double.tryParse(_sqftCtrl.text) ?? _room.sqft;
+    if (parsedSqft < 50) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Room must be at least 50 sqft.'), duration: Duration(seconds: 2)),
+      );
+      return;
+    }
     widget.onSave(_room.copyWith(
       name: _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : _room.name,
       tenant: _tenantCtrl.text.trim().isNotEmpty ? _tenantCtrl.text.trim() : _room.tenant,
-      sqft: double.tryParse(_sqftCtrl.text) ?? _room.sqft,
+      sqft: parsedSqft,
       floorLevel: int.tryParse(_floorCtrl.text) ?? 0,
     ));
     Navigator.pop(context);
@@ -77,7 +84,7 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
               ]),
               const SizedBox(height: 14),
               Row(children: [
-                Expanded(child: TextFormField(controller: _sqftCtrl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'Square footage', suffixText: 'sqft'))),
+                Expanded(child: TextFormField(controller: _sqftCtrl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'Square footage', hintText: 'min 50', suffixText: 'sqft'))),
                 const SizedBox(width: 12),
                 Expanded(child: TextFormField(controller: _floorCtrl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'Floor #', hintText: 'e.g. 3', suffixText: 'floor'))),
               ]),
@@ -96,7 +103,7 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
               const SizedBox(height: 12),
               LabeledSlider(label: 'Natural light', value: _room.naturalLightScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Dim' : v.toInt() < 7 ? 'Good' : 'Bright', onChanged: (v) => setState(() { _room = _room.copyWith(naturalLightScore: v); })),
               const SizedBox(height: 4),
-              LabeledSlider(label: 'Noise level', value: _room.noiseScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Loud' : v.toInt() < 7 ? 'Moderate' : 'Quiet', onChanged: (v) => setState(() { _room = _room.copyWith(noiseScore: v); })),
+              LabeledSlider(label: 'Quietness', value: _room.noiseScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Noisy' : v.toInt() < 7 ? 'Moderate' : 'Quiet', onChanged: (v) => setState(() { _room = _room.copyWith(noiseScore: v); })),
               const SizedBox(height: 4),
               LabeledSlider(label: 'Storage space', value: _room.storageScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Minimal' : v.toInt() < 7 ? 'Average' : 'Plenty', onChanged: (v) => setState(() { _room = _room.copyWith(storageScore: v); })),
               const SizedBox(height: 24),

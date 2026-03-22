@@ -1,0 +1,19 @@
+Split Fair — App Store Info
+===========================
+
+PRIVACY POLICY
+Live URL: https://earnest-hummingbird-6fa7cb.netlify.app/
+NOTE: Remove password protection in Netlify dashboard before submitting.
+
+GOOGLE PLAY
+Developer Name: Clairmont Labs
+Account ID: 7854710717213243602
+Email: clairmont425@gmail.com
+
+APPLE APP STORE
+Developer Name: (check App Store Connect)
+Email: clairmont425@gmail.com
+
+USE THIS URL IN:
+- Apple App Store Connect → App Privacy → Privacy Policy URL
+- Google Play Console → Store listing → Privacy Policy URL

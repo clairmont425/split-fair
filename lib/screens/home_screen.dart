@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../models/app_state.dart';
 import '../models/room.dart';
+import '../theme/app_images.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'room_edit_sheet.dart';
@@ -49,11 +51,35 @@ class HomeScreen extends StatelessWidget {
     return SliverAppBar(
       backgroundColor: AppColors.surface,
       pinned: true,
-      expandedHeight: 120,
+      expandedHeight: 180,
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+        titlePadding: const EdgeInsets.only(left: 20, bottom: 6),
+        // Firefly home_bg shows as a subtle background behind the app bar text.
+        // A gradient fade-to-white at the bottom keeps the title always legible.
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              AppImages.homeBg,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              errorBuilder: (_, __, ___) => const ColoredBox(color: AppColors.surface),
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, AppColors.surface],
+                  stops: [0.35, 1.0],
+                ),
+              ),
+            ),
+          ],
+        ),
         title: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -76,6 +102,7 @@ class HomeScreen extends StatelessWidget {
           tooltip: 'Saved configs',
         ),
         IconButton(onPressed: () => _showResetDialog(context, state), icon: const Icon(Icons.refresh_rounded, size: 22)),
+        IconButton(onPressed: () => _showAbout(context), icon: const Icon(Icons.info_outline_rounded, size: 22), tooltip: 'About'),
         const SizedBox(width: 4),
       ],
     );
@@ -97,6 +124,7 @@ class HomeScreen extends StatelessWidget {
     return _AddressField(
       initialValue: state.address,
       onChanged: state.setAddress,
+      suggestions: state.recentAddresses,
     ).animate().fadeIn(duration: 300.ms, delay: 25.ms).slideY(begin: 0.05, end: 0);
   }
 
@@ -122,16 +150,39 @@ class HomeScreen extends StatelessWidget {
         itemBuilder: (context, i) {
           final room = state.rooms[i];
           final color = AppColors.roomColors[i % AppColors.roomColors.length];
+          final canDelete = state.rooms.length > 2;
           return KeyedSubtree(
             key: ValueKey(room.id),
-            child: _RoomTile(
-              room: room, color: color, index: i,
-              onEdit: () => _openRoomEdit(context, state, room.id),
-              onDelete: state.rooms.length > 2 ? () => state.removeRoom(room.id) : null,
-            ).animate().fadeIn(duration: 280.ms, delay: (40 + i * 65).ms).slideX(begin: 0.04, end: 0),
+            child: Dismissible(
+              key: Key('dismiss_${room.id}'),
+              direction: canDelete ? DismissDirection.endToStart : DismissDirection.none,
+              onDismissed: (_) => state.removeRoom(room.id),
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 24),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.delete_rounded, color: Colors.white, size: 22),
+              ),
+              child: _RoomTile(
+                room: room, color: color, index: i,
+                onEdit: () => _openRoomEdit(context, state, room.id),
+                onDelete: canDelete ? () => state.removeRoom(room.id) : null,
+              ),
+            ),
           );
         },
       ),
+      const SizedBox(height: 6),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const Icon(Icons.swipe_left_rounded, size: 13, color: AppColors.textTertiary),
+        const SizedBox(width: 4),
+        Text('Swipe to remove  ·  Hold & drag to reorder',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 11, color: AppColors.textTertiary)),
+      ]),
     ]);
   }
 
@@ -171,6 +222,37 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _showAbout(BuildContext context) async {
+    final info = await PackageInfo.fromPlatform();
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.balance_rounded, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          const Text('Split Fair'),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Version ${info.version} (${info.buildNumber})',
+            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          const SizedBox(height: 12),
+          const Text('Fair rent splitting — weighted by room size, features, and quality.', style: TextStyle(fontSize: 14)),
+          const SizedBox(height: 12),
+          const Text('© 2025 Split Fair', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
   void _showResetDialog(BuildContext context, AppState state) {
     showDialog(context: context, builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -202,7 +284,7 @@ class _ScoringExplainerSheet extends StatelessWidget {
     ('A/C unit', '+10 pts'),
     ('Floor bonus', '+2 pts/floor (max +12)'),
     ('Natural light (1–10)', '×3 pts each'),
-    ('Noise level (1–10)', '×2 pts each'),
+    ('Quietness (1–10)', '×2 pts each'),
     ('Storage space (1–10)', '×1.5 pts each'),
   ];
 
@@ -264,28 +346,79 @@ class _ScoringExplainerSheet extends StatelessWidget {
 class _AddressField extends StatefulWidget {
   final String initialValue;
   final ValueChanged<String> onChanged;
-  const _AddressField({required this.initialValue, required this.onChanged});
+  final List<String> suggestions;
+  const _AddressField({required this.initialValue, required this.onChanged, required this.suggestions});
   @override
   State<_AddressField> createState() => _AddressFieldState();
 }
 
 class _AddressFieldState extends State<_AddressField> {
   late final TextEditingController _ctrl;
+  final FocusNode _focus = FocusNode();
+
   @override
   void initState() { super.initState(); _ctrl = TextEditingController(text: widget.initialValue); }
+
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void didUpdateWidget(_AddressField old) {
+    super.didUpdateWidget(old);
+    // Sync field if state was reset externally (e.g. reset button)
+    if (widget.initialValue != old.initialValue && widget.initialValue != _ctrl.text) {
+      _ctrl.text = widget.initialValue;
+    }
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); _focus.dispose(); super.dispose(); }
+
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: _ctrl,
-      textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(
-        labelText: 'Property address (optional)',
-        hintText: 'e.g. 123 Main St, Apt 4B',
-        prefixIcon: Icon(Icons.location_on_outlined, size: 20),
+    return RawAutocomplete<String>(
+      textEditingController: _ctrl,
+      focusNode: _focus,
+      optionsBuilder: (value) {
+        if (value.text.isEmpty || widget.suggestions.isEmpty) return const Iterable<String>.empty();
+        final q = value.text.toLowerCase();
+        return widget.suggestions.where((s) => s.toLowerCase().contains(q));
+      },
+      onSelected: (s) { _ctrl.text = s; widget.onChanged(s); },
+      fieldViewBuilder: (_, ctrl, focusNode, __) => TextFormField(
+        controller: ctrl,
+        focusNode: focusNode,
+        keyboardType: TextInputType.streetAddress,
+        textCapitalization: TextCapitalization.words,
+        autocorrect: false,
+        decoration: const InputDecoration(
+          labelText: 'Property address (optional)',
+          hintText: 'e.g. 123 Main St, Apt 4B',
+          prefixIcon: Icon(Icons.location_on_outlined, size: 20),
+        ),
+        onChanged: widget.onChanged,
       ),
-      onChanged: widget.onChanged,
+      optionsViewBuilder: (_, onSelected, options) => Align(
+        alignment: Alignment.topLeft,
+        child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460, maxHeight: 200),
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              shrinkWrap: true,
+              itemCount: options.length,
+              itemBuilder: (_, i) {
+                final s = options.elementAt(i);
+                return ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.history_rounded, size: 16, color: AppColors.textTertiary),
+                  title: Text(s, style: const TextStyle(fontSize: 14)),
+                  onTap: () => onSelected(s),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -326,8 +459,8 @@ class _RoomTile extends StatelessWidget {
                   if (room.hasPrivateBath) ...[const Text(' · '), const Icon(Icons.bathtub_rounded, size: 12, color: AppColors.textTertiary)],
                 ]),
               ])),
-              if (onDelete != null) IconButton(onPressed: onDelete, icon: Icon(Icons.remove_circle_outline_rounded, size: 20, color: AppColors.error.withOpacity(0.7))),
-              const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textTertiary),
+              if (onDelete != null)
+                IconButton(onPressed: onDelete, icon: Icon(Icons.remove_circle_outline_rounded, size: 20, color: AppColors.error.withOpacity(0.7))),
             ]),
           ),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../models/app_state.dart';
+import '../theme/app_images.dart';
 import '../theme/app_theme.dart';
 
 class PaywallSheet extends StatefulWidget {
@@ -11,15 +12,22 @@ class PaywallSheet extends StatefulWidget {
 }
 
 class _PaywallSheetState extends State<PaywallSheet> {
-  bool _loading = false;
+  void _purchase() {
+    // Triggers the real App Store / Play Store purchase flow.
+    // IapService listens for the result and calls AppState.unlockIap() on success.
+    context.read<AppState>().iapService.purchasePdfExport();
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Opening store…')),
+    );
+  }
 
-  Future<void> _purchase() async {
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> _restore() async {
+    await context.read<AppState>().iapService.restorePurchases();
     if (mounted) {
-      context.read<AppState>().unlockIap();
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF export unlocked!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchases restored.')),
+      );
     }
   }
 
@@ -31,11 +39,33 @@ class _PaywallSheetState extends State<PaywallSheet> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.borderMed, borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 28),
+        // Firefly paywall hero with gradient backdrop for visual impact.
         Container(
-          width: 72, height: 72,
-          decoration: BoxDecoration(color: AppColors.accentLight, borderRadius: BorderRadius.circular(20)),
-          child: const Icon(Icons.picture_as_pdf_rounded, size: 36, color: AppColors.accent),
-        ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
+          width: 140,
+          height: 140,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const RadialGradient(
+              colors: [AppColors.accentLight, AppColors.primaryLight],
+              center: Alignment.topLeft,
+              radius: 1.4,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accent.withOpacity(0.18),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              AppImages.paywallHero,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.picture_as_pdf_rounded, size: 48, color: AppColors.accent),
+            ),
+          ),
+        ).animate().scale(duration: 450.ms, curve: Curves.elasticOut),
         const SizedBox(height: 20),
         Text('Unlock PDF Export', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22), textAlign: TextAlign.center),
         const SizedBox(height: 8),
@@ -49,11 +79,15 @@ class _PaywallSheetState extends State<PaywallSheet> {
           ]))),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: _loading ? null : _purchase,
-          child: _loading ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)) : const Text('Unlock for \$1.99'),
+          onPressed: _purchase,
+          child: const Text('Unlock for \$1.99'),
         ),
         const SizedBox(height: 12),
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Maybe later')),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Maybe later')),
+          const SizedBox(width: 8),
+          TextButton(onPressed: _restore, child: const Text('Restore')),
+        ]),
       ]),
     );
   }

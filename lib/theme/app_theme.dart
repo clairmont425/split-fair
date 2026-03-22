@@ -17,8 +17,12 @@ class AppColors {
   static const error = Color(0xFFE24B4A);
   static const errorLight = Color(0xFFFCEBEB);
   static const roomColors = [
-    Color(0xFF1D9E75), Color(0xFF378ADD), Color(0xFF7F77DD),
-    Color(0xFFD85A30), Color(0xFFEF9F27), Color(0xFFD4537E),
+    Color(0xFF1D9E75), // green
+    Color(0xFF378ADD), // blue
+    Color(0xFFEF9F27), // amber  ← was purple (too close to blue)
+    Color(0xFFD85A30), // deep orange-red
+    Color(0xFF7F77DD), // purple  ← moved to 5th
+    Color(0xFFD4537E), // pink
   ];
 }
 

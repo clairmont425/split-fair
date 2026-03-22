@@ -210,11 +210,22 @@ class BarChartRow extends StatelessWidget {
 // ─── Donut Chart ────────────────────────────────────────────────────────────
 
 class DonutChart extends StatelessWidget {
-  /// List of (color, fraction) where fraction sums to ~1.0
-  final List<(Color, double, String)> slices; // color, fraction, label
+  /// List of (color, fraction, label) where fraction sums to ~1.0
+  final List<(Color, double, String)> slices;
   final String centerLabel;
   final String centerSub;
-  const DonutChart({super.key, required this.slices, required this.centerLabel, this.centerSub = ''});
+  /// When false, omits the legend below the ring (caller builds its own).
+  final bool showLegend;
+  /// Diameter of the ring in logical pixels.
+  final double size;
+  const DonutChart({
+    super.key,
+    required this.slices,
+    required this.centerLabel,
+    this.centerSub = '',
+    this.showLegend = true,
+    this.size = 180,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -225,26 +236,28 @@ class DonutChart extends StatelessWidget {
       builder: (context, progress, _) {
         return Column(children: [
           SizedBox(
-            width: 180, height: 180,
+            width: size, height: size,
             child: CustomPaint(
               painter: _DonutPainter(slices: slices, progress: progress),
               child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(centerLabel, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                if (centerSub.isNotEmpty) Text(centerSub, style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                Text(centerLabel, style: TextStyle(fontSize: size * 0.094, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                if (centerSub.isNotEmpty) Text(centerSub, style: TextStyle(fontSize: size * 0.061, color: AppColors.textTertiary)),
               ])),
             ),
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12, runSpacing: 8, alignment: WrapAlignment.center,
-            children: slices.map((s) => Row(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 10, height: 10, decoration: BoxDecoration(color: s.$1, shape: BoxShape.circle)),
-              const SizedBox(width: 5),
-              Text(s.$3, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              const SizedBox(width: 4),
-              Text('${(s.$2 * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-            ])).toList(),
-          ),
+          if (showLegend) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12, runSpacing: 8, alignment: WrapAlignment.center,
+              children: slices.map((s) => Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 10, height: 10, decoration: BoxDecoration(color: s.$1, shape: BoxShape.circle)),
+                const SizedBox(width: 5),
+                Text(s.$3, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                const SizedBox(width: 4),
+                Text('${(s.$2 * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              ])).toList(),
+            ),
+          ],
         ]);
       },
     );
