@@ -34,15 +34,26 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       flutter: stable
-      android_signing:
-        - split_fair_keystore
+      groups:
+        - android-signing
       vars:
         PACKAGE_NAME: "com.splitfair.rent_split"
+        KEY_ALIAS: "split-fair"
     scripts:
       - name: Get Flutter packages
         script: flutter packages pub get
+      - name: Set up Android keystore
+        script: |
+          echo $CM_KEYSTORE_B64 | base64 --decode > $CM_BUILD_DIR/split-fair-release.jks
+          export KEYSTORE_PATH=$CM_BUILD_DIR/split-fair-release.jks
+          export KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD
+          export KEY_PASSWORD=$CM_KEY_PASSWORD
       - name: Build Android AAB
         script: |
+          export KEYSTORE_PATH=$CM_BUILD_DIR/split-fair-release.jks
+          export KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD
+          export KEY_ALIAS=split-fair
+          export KEY_PASSWORD=$CM_KEY_PASSWORD
           flutter build appbundle --release
     artifacts:
       - build/**/outputs/**/*.aab
