@@ -48,3 +48,5 @@ app.*.map.json
 .ngrok-token
 node_modules/
 Split_Fair_Marketing_Strategy.docx
+*.jks
+*.jks.b64
