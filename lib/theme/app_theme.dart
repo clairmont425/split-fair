@@ -19,10 +19,14 @@ class AppColors {
   static const roomColors = [
     Color(0xFF1D9E75), // green
     Color(0xFF378ADD), // blue
-    Color(0xFFEF9F27), // amber  ← was purple (too close to blue)
+    Color(0xFFEF9F27), // amber
     Color(0xFFD85A30), // deep orange-red
-    Color(0xFF7F77DD), // purple  ← moved to 5th
+    Color(0xFFEA4335), // google red
     Color(0xFFD4537E), // pink
+    Color(0xFF00897B), // teal
+    Color(0xFF34A853), // google green (light)
+    Color(0xFF0097A7), // cyan
+    Color(0xFF8D6E63), // warm brown
   ];
 }
 
@@ -47,7 +51,7 @@ class AppTheme {
         titleTextStyle: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surface, elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.border, width: 1)),
         margin: EdgeInsets.zero,
