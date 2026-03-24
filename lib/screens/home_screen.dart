@@ -30,6 +30,8 @@ class HomeScreen extends StatelessWidget {
                     _buildRentInput(context, state),
                     const SizedBox(height: 12),
                     _buildAddressInput(context, state),
+                    const SizedBox(height: 12),
+                    _CommunalSpaceCard(state: state),
                     const SizedBox(height: 24),
                     _buildRoomsList(context, state),
                     const SizedBox(height: 16),
@@ -188,9 +190,9 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildAddRoomButton(BuildContext context, AppState state) {
     return OutlinedButton.icon(
-      onPressed: state.rooms.length < 6 ? state.addRoom : null,
+      onPressed: state.addRoom,
       icon: const Icon(Icons.add_rounded, size: 20),
-      label: Text(state.rooms.length < 6 ? 'Add another room' : 'Maximum 6 rooms'),
+      label: const Text('Add another room'),
       style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
     ).animate().fadeIn(duration: 400.ms, delay: 100.ms);
   }
@@ -198,7 +200,7 @@ class HomeScreen extends StatelessWidget {
   Widget _buildCalculateButton(BuildContext context, AppState state) {
     final isReady = state.rooms.length >= 2 && state.totalRent > 0;
     return ElevatedButton(
-      onPressed: isReady ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultsScreen())) : null,
+      onPressed: isReady ? () { FocusScope.of(context).unfocus(); Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultsScreen())); } : null,
       child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.calculate_rounded, size: 20),
         SizedBox(width: 8),
@@ -420,6 +422,136 @@ class _AddressFieldState extends State<_AddressField> {
         ),
       ),
     );
+  }
+}
+
+// ─── Communal Space Card ─────────────────────────────────────────────────────
+
+class _CommunalSpaceCard extends StatefulWidget {
+  final AppState state;
+  const _CommunalSpaceCard({required this.state});
+  @override
+  State<_CommunalSpaceCard> createState() => _CommunalSpaceCardState();
+}
+
+class _CommunalSpaceCardState extends State<_CommunalSpaceCard> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final v = widget.state.totalAptSqft;
+    _ctrl = TextEditingController(text: v > 0 ? v.toInt().toString() : '');
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final enabled = state.communalEnabled;
+    final communal = state.communalSqft;
+    final perRoom = state.communalSqftPerRoom;
+    final numRooms = state.rooms.length;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      child: Container(
+        decoration: BoxDecoration(
+          color: enabled ? AppColors.primaryLight : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: enabled ? AppColors.primary.withOpacity(0.3) : AppColors.border),
+        ),
+        child: Column(
+          children: [
+            // Toggle row
+            InkWell(
+              onTap: () => state.setCommunalEnabled(!enabled),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: enabled ? AppColors.primary : AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.house_rounded, size: 18,
+                      color: enabled ? Colors.white : AppColors.textTertiary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Communal space', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Split shared areas equally',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
+                    ]),
+                  ),
+                  Switch(
+                    value: enabled,
+                    onChanged: state.setCommunalEnabled,
+                    activeColor: AppColors.primary,
+                  ),
+                ]),
+              ),
+            ),
+            // Expanded content when enabled
+            if (enabled) ...[
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  TextFormField(
+                    controller: _ctrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Total apartment sqft',
+                      hintText: 'e.g. 1200',
+                      suffixText: 'sqft',
+                    ),
+                    onChanged: (v) {
+                      final parsed = double.tryParse(v);
+                      state.setTotalAptSqft(parsed ?? 0);
+                    },
+                  ),
+                  if (communal > 0) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Shared areas: ${communal.toInt()} sqft ÷ $numRooms rooms = +${perRoom.toInt()} sqft added to each room\'s score',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 12, color: AppColors.primaryDark),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ] else if (state.totalAptSqft > 0) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      'Total sqft must be greater than the sum of all rooms.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 12, color: AppColors.error),
+                    ),
+                  ],
+                ]),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 300.ms, delay: 35.ms).slideY(begin: 0.05, end: 0);
   }
 }
 
