@@ -13,13 +13,25 @@ class PaywallSheet extends StatefulWidget {
 
 class _PaywallSheetState extends State<PaywallSheet> {
   void _purchase() {
-    // Triggers the real App Store / Play Store purchase flow.
-    // IapService listens for the result and calls AppState.unlockIap() on success.
-    context.read<AppState>().iapService.purchasePdfExport();
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Opening store…')),
-    );
+    final iap = context.read<AppState>().iapService;
+    if (!iap.storeAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Store not available. Check your connection.')),
+      );
+      return;
+    }
+    iap.purchasePdfExport();
+    // Only pop if the product was found — otherwise stay open so user sees the error
+    if (iap.errorMessage == null) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Opening store…')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(iap.errorMessage!)),
+      );
+    }
   }
 
   Future<void> _restore() async {
