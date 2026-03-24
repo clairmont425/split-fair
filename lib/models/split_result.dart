@@ -12,9 +12,13 @@ class SplitResult {
   });
 }
 
-List<SplitResult> calculateSplit({required List<Room> rooms, required double totalRent}) {
+List<SplitResult> calculateSplit({
+  required List<Room> rooms,
+  required double totalRent,
+  double communalSqftPerRoom = 0,
+}) {
   if (rooms.isEmpty || totalRent <= 0) return [];
-  final scores = rooms.map((r) => r.computeScore()).toList();
+  final scores = rooms.map((r) => r.computeScore(extraSqft: communalSqftPerRoom)).toList();
   final totalScore = scores.fold(0.0, (a, b) => a + b);
   return List.generate(rooms.length, (i) {
     final pct = scores[i] / totalScore;

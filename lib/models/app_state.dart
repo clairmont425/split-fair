@@ -16,6 +16,8 @@ const _kIapConfigsKey = 'iap_configs_unlocked';
 const _kAddressKey = 'saved_address';
 const _kConfigsKey = 'saved_configs';
 const _kRecentAddressesKey = 'recent_addresses';
+const _kCommunalEnabledKey = 'communal_enabled';
+const _kTotalAptSqftKey = 'total_apt_sqft';
 
 // ─── Saved Configuration ─────────────────────────────────────────────────────
 
@@ -66,6 +68,8 @@ class AppState extends ChangeNotifier {
   String _address = '';
   List<SavedConfig> _savedConfigs = [];
   List<String> _recentAddresses = [];
+  bool _communalEnabled = false;
+  double _totalAptSqft = 0;
 
   List<Room> get rooms => _rooms;
   double get totalRent => _totalRent;
@@ -75,8 +79,26 @@ class AppState extends ChangeNotifier {
   String get address => _address;
   List<SavedConfig> get savedConfigs => List.unmodifiable(_savedConfigs);
   List<String> get recentAddresses => List.unmodifiable(_recentAddresses);
+  bool get communalEnabled => _communalEnabled;
+  double get totalAptSqft => _totalAptSqft;
 
-  List<SplitResult> get results => calculateSplit(rooms: _rooms, totalRent: _totalRent);
+  /// Sqft of shared areas (living room, kitchen, etc). Zero if disabled or not set.
+  double get communalSqft {
+    if (!_communalEnabled || _totalAptSqft <= 0 || _rooms.isEmpty) return 0;
+    final roomTotal = _rooms.fold(0.0, (sum, r) => sum + r.sqft);
+    final communal = _totalAptSqft - roomTotal;
+    return communal > 0 ? communal : 0;
+  }
+
+  /// Equal share of communal sqft each room absorbs for scoring purposes.
+  double get communalSqftPerRoom =>
+      _rooms.isEmpty ? 0 : communalSqft / _rooms.length;
+
+  List<SplitResult> get results => calculateSplit(
+        rooms: _rooms,
+        totalRent: _totalRent,
+        communalSqftPerRoom: communalSqftPerRoom,
+      );
 
   AppState() { _loadFromPrefs(); }
 
@@ -103,6 +125,8 @@ class AppState extends ChangeNotifier {
     _iapUnlocked = prefs.getBool(_kIapKey) ?? false;
     _iapConfigsUnlocked = prefs.getBool(_kIapConfigsKey) ?? false;
     _address = prefs.getString(_kAddressKey) ?? '';
+    _communalEnabled = prefs.getBool(_kCommunalEnabledKey) ?? false;
+    _totalAptSqft = prefs.getDouble(_kTotalAptSqftKey) ?? 0;
     final recentsJson = prefs.getString(_kRecentAddressesKey);
     if (recentsJson != null) _recentAddresses = List<String>.from(jsonDecode(recentsJson) as List);
     final configsJson = prefs.getString(_kConfigsKey);
@@ -116,6 +140,8 @@ class AppState extends ChangeNotifier {
     await prefs.setString(_kRoomsKey, Room.encodeList(_rooms));
     await prefs.setDouble(_kRentKey, _totalRent);
     await prefs.setString(_kAddressKey, _address);
+    await prefs.setBool(_kCommunalEnabledKey, _communalEnabled);
+    await prefs.setDouble(_kTotalAptSqftKey, _totalAptSqft);
   }
 
   Future<void> _saveConfigs() async {
@@ -124,6 +150,8 @@ class AppState extends ChangeNotifier {
   }
 
   void setTotalRent(double rent) { _totalRent = rent; notifyListeners(); _save(); }
+  void setCommunalEnabled(bool v) { _communalEnabled = v; notifyListeners(); _save(); }
+  void setTotalAptSqft(double v) { _totalAptSqft = v; notifyListeners(); _save(); }
   void setAddress(String a) {
     _address = a;
     final trimmed = a.trim();
@@ -214,6 +242,8 @@ class AppState extends ChangeNotifier {
     ];
     _totalRent = 2500;
     _address = '';
+    _communalEnabled = false;
+    _totalAptSqft = 0;
     notifyListeners(); _save();
   }
 }

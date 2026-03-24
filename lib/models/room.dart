@@ -37,8 +37,8 @@ class Room {
     );
   }
 
-  double computeScore() {
-    double score = sqft * 1.0;
+  double computeScore({double extraSqft = 0}) {
+    double score = (sqft + extraSqft) * 1.0;
     if (hasPrivateBath) score += 40;
     if (hasBalcony) score += 20;
     if (hasWalkInCloset) score += 15;

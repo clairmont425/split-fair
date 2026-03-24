@@ -35,10 +35,19 @@ class _PaywallSheetState extends State<PaywallSheet> {
   }
 
   Future<void> _restore() async {
-    await context.read<AppState>().iapService.restorePurchases();
-    if (mounted) {
+    final iap = context.read<AppState>().iapService;
+    final wasUnlocked = iap.pdfUnlocked;
+    await iap.restorePurchases();
+    if (!mounted) return;
+    final nowUnlocked = iap.pdfUnlocked;
+    if (nowUnlocked && !wasUnlocked) {
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Purchases restored.')),
+        const SnackBar(content: Text('PDF Export restored! Enjoy.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No previous purchase found for this Apple ID.')),
       );
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../models/app_state.dart';
@@ -155,19 +156,38 @@ class HomeScreen extends StatelessWidget {
           final canDelete = state.rooms.length > 2;
           return KeyedSubtree(
             key: ValueKey(room.id),
-            child: Dismissible(
-              key: Key('dismiss_${room.id}'),
-              direction: canDelete ? DismissDirection.endToStart : DismissDirection.none,
-              onDismissed: (_) => state.removeRoom(room.id),
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 24),
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.delete_rounded, color: Colors.white, size: 22),
+            child: Slidable(
+              key: Key('slide_${room.id}'),
+              enabled: canDelete,
+              endActionPane: ActionPane(
+                motion: const BehindMotion(),
+                extentRatio: 0.28,
+                dismissible: DismissiblePane(onDismissed: () => state.removeRoom(room.id)),
+                children: [
+                  CustomSlidableAction(
+                    onPressed: (_) => state.removeRoom(room.id),
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
+                    padding: EdgeInsets.zero,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(left: 8, bottom: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.delete_rounded, color: Colors.white, size: 22),
+                          SizedBox(height: 4),
+                          Text('Remove', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               child: _RoomTile(
                 room: room, color: color, index: i,
