@@ -14,9 +14,11 @@ workflows:
         script: keychain initialize
       - name: Fetch signing files
         script: |
+          echo "$CERTIFICATE_PRIVATE_KEY" > /tmp/cert_key.pem
           app-store-connect fetch-signing-files \
             com.splitfair.rentSplit \
             --type IOS_APP_STORE \
+            --certificate-key /tmp/cert_key.pem \
             --create
       - name: Get Flutter packages and run project migrations
         script: |
