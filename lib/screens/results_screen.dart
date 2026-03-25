@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -22,48 +23,52 @@ class ResultsScreen extends StatelessWidget {
       final results = state.results;
       if (results.isEmpty) return const Scaffold(body: Center(child: Text('No data')));
       final total = state.totalRent;
-      return Scaffold(
-        backgroundColor: AppColors.surfaceVariant,
-        appBar: AppBar(
-          title: const Text('Fair split'),
-          actions: [
-            IconButton(onPressed: () => _shareText(context, results, total), icon: const Icon(Icons.ios_share_rounded, size: 22)),
-            IconButton(onPressed: () => _exportPdf(context, state, results), icon: const Icon(Icons.picture_as_pdf_rounded, size: 22)),
-            const SizedBox(width: 8),
-          ],
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            _TotalHeader(total: total, count: results.length),
-            const SizedBox(height: 16),
-            _ScaleCard(results: results)
-              .animate().fadeIn(duration: 450.ms, delay: 80.ms).slideY(begin: 0.04, end: 0),
-            const SizedBox(height: 20),
-            const SectionHeader(label: 'Each person pays'),
-            const SizedBox(height: 8),
-            ...results.asMap().entries.map((e) {
-              final color = AppColors.roomColors[e.key % AppColors.roomColors.length];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: AmountCard(name: e.value.room.name, tenant: e.value.room.tenant, amount: e.value.amount, percentage: e.value.percentage, color: color, rank: e.key + 1)
-                  .animate().fadeIn(duration: 300.ms, delay: (e.key * 60).ms).slideX(begin: 0.05, end: 0),
-              );
-            }),
-            const SizedBox(height: 20),
-            // For 3+ rooms the donut is already shown in _ScaleCard; only show here for 2-person
-            if (results.length <= 2) ...[
-              _DonutCard(results: results, total: total),
-              const SizedBox(height: 20),
-            ],
-            _BreakdownCard(results: results),
-            const SizedBox(height: 20),
-            _WhyCard(results: results),
-            const SizedBox(height: 20),
-            _ShareCard(results: results, total: total, onShareText: () => _shareText(context, results, total), onCopyText: () => _copyToClipboard(context, results, total), onExportPdf: () => _exportPdf(context, state, results), isUnlocked: state.iapUnlocked),
-            const SizedBox(height: 40),
-          ],
-        ),
+      return Stack(
+        children: [
+          Scaffold(
+            backgroundColor: AppColors.surfaceVariant,
+            appBar: AppBar(
+              title: const Text('Fair split'),
+              actions: [
+                IconButton(onPressed: () => _shareText(context, results, total), icon: const Icon(Icons.ios_share_rounded, size: 22)),
+                IconButton(onPressed: () => _exportPdf(context, state, results), icon: const Icon(Icons.picture_as_pdf_rounded, size: 22)),
+                const SizedBox(width: 8),
+              ],
+            ),
+            body: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                _TotalHeader(total: total, count: results.length),
+                const SizedBox(height: 16),
+                _ScaleCard(results: results)
+                  .animate().fadeIn(duration: 450.ms, delay: 80.ms).slideY(begin: 0.04, end: 0),
+                const SizedBox(height: 20),
+                const SectionHeader(label: 'Each person pays'),
+                const SizedBox(height: 8),
+                ...results.asMap().entries.map((e) {
+                  final color = AppColors.roomColors[e.key % AppColors.roomColors.length];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: AmountCard(name: e.value.room.name, tenant: e.value.room.tenant, amount: e.value.amount, percentage: e.value.percentage, color: color, rank: e.key + 1)
+                      .animate().fadeIn(duration: 300.ms, delay: (e.key * 60).ms).slideX(begin: 0.05, end: 0),
+                  );
+                }),
+                const SizedBox(height: 20),
+                if (results.length <= 2) ...[
+                  _DonutCard(results: results, total: total),
+                  const SizedBox(height: 20),
+                ],
+                _BreakdownCard(results: results),
+                const SizedBox(height: 20),
+                _WhyCard(results: results),
+                const SizedBox(height: 20),
+                _ShareCard(results: results, total: total, onShareText: () => _shareText(context, results, total), onCopyText: () => _copyToClipboard(context, results, total), onExportPdf: () => _exportPdf(context, state, results), isUnlocked: state.iapUnlocked),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+          const Positioned.fill(child: _ConfettiBurst()),
+        ],
       );
     });
   }
@@ -105,26 +110,93 @@ class ResultsScreen extends StatelessWidget {
   }
 }
 
-class _TotalHeader extends StatelessWidget {
+class _TotalHeader extends StatefulWidget {
   final double total;
   final int count;
   const _TotalHeader({required this.total, required this.count});
+  @override
+  State<_TotalHeader> createState() => _TotalHeaderState();
+}
+
+class _TotalHeaderState extends State<_TotalHeader> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutExpo);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Total monthly rent', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.8))),
+        Text('Total monthly rent',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.8))),
         const SizedBox(height: 6),
-        Text('\$${total.toStringAsFixed(2)}', style: Theme.of(context).textTheme.displayLarge?.copyWith(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w700)),
+        AnimatedBuilder(
+          animation: _anim,
+          builder: (_, __) {
+            final displayed = widget.total * _anim.value;
+            final formatted = '\$${displayed.toStringAsFixed(2)}';
+            final style = Theme.of(context).textTheme.displayLarge?.copyWith(
+              color: Colors.white, fontSize: 38, fontWeight: FontWeight.w700);
+            return _RollingHeaderText(text: formatted, style: style!);
+          },
+        ),
         const SizedBox(height: 4),
-        Text('Split across $count rooms', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.8))),
+        Text('Split across ${widget.count} rooms',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.8))),
       ]),
     ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.97, 0.97), end: const Offset(1, 1));
+  }
+}
+
+/// Rolling text for the header (white colored digits)
+class _RollingHeaderText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  const _RollingHeaderText({required this.text, required this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: text.split('').asMap().entries.map((e) {
+        final isDigit = RegExp(r'\d').hasMatch(e.value);
+        return ClipRect(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 130),
+            transitionBuilder: (child, anim) {
+              if (!isDigit) return child;
+              return SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.6), end: Offset.zero)
+                    .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+                child: FadeTransition(opacity: anim, child: child),
+              );
+            },
+            child: Text(e.value, key: ValueKey('h_${e.key}_${e.value}'), style: style),
+          ),
+        );
+      }).toList(),
+    );
   }
 }
 
@@ -436,4 +508,107 @@ class _PtChip extends StatelessWidget {
       child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: color)),
     );
   }
+}
+
+// ─── Confetti burst ──────────────────────────────────────────────────────────
+
+class _ConfettiBurst extends StatefulWidget {
+  const _ConfettiBurst();
+  @override
+  State<_ConfettiBurst> createState() => _ConfettiBurstState();
+}
+
+class _ConfettiBurstState extends State<_ConfettiBurst> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late List<_Particle> _particles;
+  final _rand = Random();
+
+  @override
+  void initState() {
+    super.initState();
+    _particles = List.generate(55, (_) => _Particle(_rand));
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, __) {
+          if (_ctrl.value >= 1.0) return const SizedBox.shrink();
+          return CustomPaint(
+            painter: _ConfettiPainter(_particles, _ctrl.value),
+            size: MediaQuery.of(context).size,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Particle {
+  final double x;          // 0–1 normalized start x
+  final double vx;         // horizontal velocity
+  final double vy;         // vertical velocity (downward)
+  final double size;
+  final Color color;
+  final double rotation;
+  final double rotSpeed;
+  final bool isCircle;
+
+  _Particle(Random r)
+      : x = r.nextDouble(),
+        vx = (r.nextDouble() - 0.5) * 0.6,
+        vy = 0.3 + r.nextDouble() * 0.7,
+        size = 5 + r.nextDouble() * 7,
+        color = [
+          const Color(0xFF1D9E75),
+          const Color(0xFFEF9F27),
+          const Color(0xFF378ADD),
+          const Color(0xFFD4537E),
+          const Color(0xFFEA4335),
+          Colors.white,
+        ][r.nextInt(6)],
+        rotation = r.nextDouble() * 2 * pi,
+        rotSpeed = (r.nextDouble() - 0.5) * 8,
+        isCircle = r.nextBool();
+}
+
+class _ConfettiPainter extends CustomPainter {
+  final List<_Particle> particles;
+  final double progress;
+  const _ConfettiPainter(this.particles, this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    for (final p in particles) {
+      // Particles burst upward then fall with gravity
+      final t = progress;
+      final px = (p.x + p.vx * t) * size.width;
+      final py = (-0.15 + p.vy * t * t * 1.8) * size.height; // parabolic arc
+      if (py > size.height) continue;
+
+      final opacity = (1.0 - (t * 1.2).clamp(0.0, 1.0)).clamp(0.0, 1.0);
+      paint.color = p.color.withOpacity(opacity);
+
+      canvas.save();
+      canvas.translate(px, py);
+      canvas.rotate(p.rotation + p.rotSpeed * t);
+      if (p.isCircle) {
+        canvas.drawCircle(Offset.zero, p.size / 2, paint);
+      } else {
+        canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size * 0.55), paint);
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.progress != progress;
 }

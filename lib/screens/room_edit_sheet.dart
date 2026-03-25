@@ -9,6 +9,9 @@ import '../widgets/score_breakdown.dart';
 class RoomEditSheet extends StatefulWidget {
   final Room room;
   final ValueChanged<Room> onSave;
+  /// Called on save with the full {roomId -> sharePct} map for ALL rooms,
+  /// so the app can redistribute communal shares atomically.
+  final ValueChanged<Map<String, double>>? onSaveAllCommunal;
   final bool communalEnabled;
   final double communalSqft;
   final List<Room> allRooms;
@@ -16,6 +19,7 @@ class RoomEditSheet extends StatefulWidget {
     super.key,
     required this.room,
     required this.onSave,
+    this.onSaveAllCommunal,
     this.communalEnabled = false,
     this.communalSqft = 0,
     this.allRooms = const [],
@@ -44,15 +48,47 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
     _communalSharePct = widget.room.communalSharePct ?? _equalShare;
   }
 
+  /// Sqft this room gets at its current slider value.
   double get _communalSqftPreview {
     if (!widget.communalEnabled || widget.communalSqft <= 0 || widget.allRooms.isEmpty) return 0;
-    final equalShare = 100.0 / widget.allRooms.length;
-    final otherPcts = widget.allRooms
-        .where((r) => r.id != widget.room.id)
-        .fold(0.0, (sum, r) => sum + (r.communalSharePct ?? equalShare));
-    final totalPct = otherPcts + _communalSharePct;
-    if (totalPct <= 0) return 0;
-    return (_communalSharePct / totalPct) * widget.communalSqft;
+    return (_communalSharePct / 100.0) * widget.communalSqft;
+  }
+
+  /// Equal share per room (used as the saved default when no explicit pct is set).
+  double get _equalShare => widget.allRooms.isEmpty ? 50.0 : 100.0 / widget.allRooms.length;
+
+  /// Compute how much each OTHER room keeps after this room claims _communalSharePct.
+  /// Redistribution is proportional to each room's saved value, so rooms with larger
+  /// saved shares absorb a larger fraction of any change — preserving relative ratios.
+  double _computedShareForOther(Room other) {
+    final otherRooms = widget.allRooms.where((r) => r.id != widget.room.id).toList();
+    if (otherRooms.isEmpty) return 0;
+
+    // Sum of other rooms' saved shares (their baseline)
+    final sumSaved = otherRooms.fold(0.0, (s, r) => s + (r.communalSharePct ?? _equalShare));
+
+    // Total remaining budget for all other rooms
+    final remaining = (100.0 - _communalSharePct).clamp(0.0, 100.0);
+
+    if (sumSaved <= 0) return remaining / otherRooms.length;
+
+    // Distribute proportionally: each other room gets (its saved ratio × remaining)
+    final savedOther = other.communalSharePct ?? _equalShare;
+    return (savedOther / sumSaved) * remaining;
+  }
+
+  double _computedSqftForOther(Room other) {
+    if (widget.communalSqft <= 0) return 0;
+    return (_computedShareForOther(other) / 100.0) * widget.communalSqft;
+  }
+
+  /// Full share map to persist across ALL rooms atomically on save.
+  Map<String, double> get _fullShareMap {
+    final map = <String, double>{};
+    for (final r in widget.allRooms) {
+      map[r.id] = r.id == widget.room.id ? _communalSharePct : _computedShareForOther(r);
+    }
+    return map;
   }
 
   @override
@@ -66,13 +102,18 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
       );
       return;
     }
-    widget.onSave(_room.copyWith(
+    final updatedRoom = _room.copyWith(
       name: _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : _room.name,
       tenant: _tenantCtrl.text.trim().isNotEmpty ? _tenantCtrl.text.trim() : _room.tenant,
       sqft: parsedSqft,
       floorLevel: int.tryParse(_floorCtrl.text) ?? 0,
       communalSharePct: widget.communalEnabled ? _communalSharePct : null,
-    ));
+    );
+    widget.onSave(updatedRoom);
+    // Fire adaptive redistribution for all rooms
+    if (widget.communalEnabled && widget.onSaveAllCommunal != null) {
+      widget.onSaveAllCommunal!(_fullShareMap);
+    }
     Navigator.pop(context);
   }
 
@@ -131,7 +172,7 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
               LabeledSlider(label: 'Quietness', value: _room.noiseScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Noisy' : v.toInt() < 7 ? 'Moderate' : 'Quiet', onChanged: (v) => setState(() { _room = _room.copyWith(noiseScore: v); })),
               const SizedBox(height: 4),
               LabeledSlider(label: 'Storage space', value: _room.storageScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Minimal' : v.toInt() < 7 ? 'Average' : 'Plenty', onChanged: (v) => setState(() { _room = _room.copyWith(storageScore: v); })),
-              if (widget.communalEnabled && widget.communalSqft > 0) ...[
+              if (widget.communalEnabled && widget.communalSqft > 0 && widget.allRooms.length > 1) ...[
                 const SizedBox(height: 24),
                 const SectionHeader(label: 'Communal space access'),
                 const SizedBox(height: 8),
@@ -143,53 +184,88 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
                     border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      const Icon(Icons.house_rounded, size: 15, color: AppColors.primaryDark),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'How much of the shared areas does this room get access to?',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12, color: AppColors.primaryDark),
-                        ),
+                    // Slider for this room
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: AppColors.primary,
+                        thumbColor: AppColors.primary,
+                        inactiveTrackColor: AppColors.primary.withOpacity(0.18),
+                        overlayColor: AppColors.primary.withOpacity(0.1),
+                        trackHeight: 4,
                       ),
-                    ]),
-                    const SizedBox(height: 14),
-                    Row(children: [
-                      Expanded(
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            activeTrackColor: AppColors.primary,
-                            thumbColor: AppColors.primary,
-                            inactiveTrackColor: AppColors.primary.withOpacity(0.18),
-                            overlayColor: AppColors.primary.withOpacity(0.1),
+                      child: Slider(
+                        value: _communalSharePct.clamp(0.0, 100.0),
+                        min: 0,
+                        max: 100,
+                        divisions: 100,
+                        onChanged: (v) => setState(() => _communalSharePct = v),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    // All-rooms live redistribution table
+                    ...widget.allRooms.map((r) {
+                      final isThis = r.id == widget.room.id;
+                      final pct   = isThis ? _communalSharePct : _computedShareForOther(r);
+                      final sqft  = isThis ? _communalSqftPreview : _computedSqftForOther(r);
+                      final label = isThis
+                          ? (r.name.isNotEmpty ? r.name : 'This room')
+                          : (r.name.isNotEmpty ? r.name : 'Other room');
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(children: [
+                          Container(
+                            width: 8, height: 8,
+                            decoration: BoxDecoration(
+                              color: isThis ? AppColors.primary : AppColors.primary.withOpacity(0.35),
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                          child: Slider(
-                            value: _communalSharePct.clamp(0.0, 100.0),
-                            min: 0,
-                            max: 100,
-                            divisions: 100,
-                            onChanged: (v) => setState(() => _communalSharePct = v),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 13,
+                                fontWeight: isThis ? FontWeight.w700 : FontWeight.w400,
+                                color: isThis ? AppColors.primaryDark : AppColors.primaryDark.withOpacity(0.7),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ]),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text(
-                        '${_communalSharePct.toStringAsFixed(0)}% share',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.primaryDark),
-                      ),
-                      Text(
-                        '≈ ${_communalSqftPreview.toStringAsFixed(0)} sqft',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 13, color: AppColors.primaryDark.withOpacity(0.75)),
-                      ),
-                    ]),
-                    const SizedBox(height: 6),
+                          // Proportion bar
+                          SizedBox(
+                            width: 80,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: pct / 100.0,
+                                minHeight: 5,
+                                backgroundColor: AppColors.primary.withOpacity(0.12),
+                                color: isThis ? AppColors.primary : AppColors.primary.withOpacity(0.4),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 70,
+                            child: Text(
+                              '${pct.toStringAsFixed(1)}%  ·  ${sqft.toStringAsFixed(0)} sqft',
+                              textAlign: TextAlign.right,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 11.5,
+                                fontWeight: isThis ? FontWeight.w700 : FontWeight.w400,
+                                color: isThis ? AppColors.primaryDark : AppColors.primaryDark.withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                        ]),
+                      );
+                    }),
+                    const SizedBox(height: 10),
                     Text(
-                      'Equal share would be ${(100.0 / widget.allRooms.length).toStringAsFixed(1)}%  (${(widget.communalSqft / widget.allRooms.length).toStringAsFixed(0)} sqft)',
+                      'Equal share: ${(100.0 / widget.allRooms.length).toStringAsFixed(1)}% each'
+                      '  ·  ${(widget.communalSqft / widget.allRooms.length).toStringAsFixed(0)} sqft each',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 11, color: AppColors.primaryDark.withOpacity(0.55)),
+                        fontSize: 11, color: AppColors.primaryDark.withOpacity(0.45)),
                     ),
                   ]),
                 ),

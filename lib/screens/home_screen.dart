@@ -181,7 +181,10 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildAddRoomButton(BuildContext context, AppState state) {
     return OutlinedButton.icon(
-      onPressed: state.addRoom,
+      onPressed: () {
+        state.addRoom();
+        HapticFeedback.lightImpact();
+      },
       icon: const Icon(Icons.add_rounded, size: 20),
       label: const Text('Add another room'),
       style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
@@ -190,14 +193,32 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildCalculateButton(BuildContext context, AppState state) {
     final isReady = state.rooms.length >= 2 && state.totalRent > 0;
-    return ElevatedButton(
-      onPressed: isReady ? () { FocusScope.of(context).unfocus(); Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultsScreen())); } : null,
+    final btn = ElevatedButton(
+      onPressed: isReady
+          ? () {
+              FocusScope.of(context).unfocus();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ResultsScreen()));
+            }
+          : null,
       child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.calculate_rounded, size: 20),
         SizedBox(width: 8),
         Text('Calculate fair split'),
       ]),
-    ).animate().fadeIn(duration: 400.ms, delay: 150.ms).slideY(begin: 0.05, end: 0);
+    );
+
+    if (isReady) {
+      return btn
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .shimmer(duration: 2200.ms, color: Colors.white.withOpacity(0.18), angle: 30)
+          .animate()  // chained: run once on build
+          .fadeIn(duration: 400.ms, delay: 150.ms)
+          .slideY(begin: 0.05, end: 0);
+    }
+    return btn
+        .animate()
+        .fadeIn(duration: 400.ms, delay: 150.ms)
+        .slideY(begin: 0.05, end: 0);
   }
 
   void _showScoringExplainer(BuildContext context) {
@@ -214,6 +235,7 @@ class HomeScreen extends StatelessWidget {
       builder: (_) => RoomEditSheet(
         room: room,
         onSave: (updated) => state.updateRoom(roomId, updated),
+        onSaveAllCommunal: (shares) => state.updateAllCommunalShares(shares),
         communalEnabled: state.communalEnabled,
         communalSqft: state.communalSqft,
         allRooms: state.rooms,

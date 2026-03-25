@@ -190,6 +190,20 @@ class AppState extends ChangeNotifier {
     if (idx != -1) { _rooms[idx] = updated; notifyListeners(); _save(); }
   }
 
+  /// Apply a full communal-share redistribution across all rooms at once.
+  /// Called when one room's slider is saved — the map contains every room id
+  /// mapped to its new communalSharePct (including the room being edited).
+  void updateAllCommunalShares(Map<String, double> idToSharePct) {
+    for (var i = 0; i < _rooms.length; i++) {
+      final share = idToSharePct[_rooms[i].id];
+      if (share != null) {
+        _rooms[i] = _rooms[i].copyWith(communalSharePct: share);
+      }
+    }
+    notifyListeners();
+    _save();
+  }
+
   void reorderRooms(int oldIdx, int newIdx) {
     if (newIdx > oldIdx) newIdx--;
     final room = _rooms.removeAt(oldIdx);

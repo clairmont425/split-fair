@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 
 class SectionHeader extends StatelessWidget {
@@ -82,7 +83,7 @@ class LabeledSlider extends StatelessWidget {
   }
 }
 
-class FeatureChip extends StatelessWidget {
+class FeatureChip extends StatefulWidget {
   final String label;
   final IconData icon;
   final bool selected;
@@ -90,27 +91,55 @@ class FeatureChip extends StatelessWidget {
   final VoidCallback onTap;
   const FeatureChip({super.key, required this.label, required this.icon, required this.selected, required this.bonus, required this.onTap});
   @override
+  State<FeatureChip> createState() => _FeatureChipState();
+}
+
+class _FeatureChipState extends State<FeatureChip> {
+  late bool _triggerBounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _triggerBounce = false;
+  }
+
+  @override
+  void didUpdateWidget(FeatureChip old) {
+    super.didUpdateWidget(old);
+    if (old.selected != widget.selected && widget.selected) {
+      setState(() => _triggerBounce = !_triggerBounce);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    final chip = GestureDetector(
+      onTap: widget.onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primaryLight : AppColors.surfaceVariant,
+          color: widget.selected ? AppColors.primaryLight : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? AppColors.primary : AppColors.border, width: selected ? 1.5 : 1),
+          border: Border.all(color: widget.selected ? AppColors.primary : AppColors.border, width: widget.selected ? 1.5 : 1),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: selected ? AppColors.primary : AppColors.textTertiary),
+          Icon(widget.icon, size: 16, color: widget.selected ? AppColors.primary : AppColors.textTertiary),
           const SizedBox(width: 6),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: selected ? AppColors.primaryDark : AppColors.textSecondary, fontSize: 12)),
-            Text(bonus, style: TextStyle(fontSize: 10, color: selected ? AppColors.primary : AppColors.textTertiary, fontWeight: FontWeight.w500)),
+            Text(widget.label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: widget.selected ? AppColors.primaryDark : AppColors.textSecondary, fontSize: 12)),
+            Text(widget.bonus, style: TextStyle(fontSize: 10, color: widget.selected ? AppColors.primary : AppColors.textTertiary, fontWeight: FontWeight.w500)),
           ]),
         ]),
       ),
     );
+
+    if (widget.selected) {
+      return chip
+          .animate(key: ValueKey(_triggerBounce), onPlay: (c) => c.forward())
+          .scale(begin: const Offset(0.88, 0.88), end: const Offset(1.0, 1.0), duration: 320.ms, curve: Curves.elasticOut);
+    }
+    return chip;
   }
 }
 
@@ -133,9 +162,11 @@ class _AmountCardState extends State<AmountCard> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _ctrl.forward();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutExpo);
+    Future.delayed(const Duration(milliseconds: 60), () {
+      if (mounted) _ctrl.forward();
+    });
   }
 
   @override
@@ -145,7 +176,11 @@ class _AmountCardState extends State<AmountCard> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Row(children: [
         Container(
           width: 44, height: 44,
@@ -162,15 +197,56 @@ class _AmountCardState extends State<AmountCard> with SingleTickerProviderStateM
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, __) => Text(
-              '\$${(widget.amount * _anim.value).toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: widget.color, fontWeight: FontWeight.w700, fontSize: 22),
-            ),
+            builder: (_, __) {
+              final displayed = widget.amount * _anim.value;
+              final formatted = '\$${displayed.toStringAsFixed(2)}';
+              final style = Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: widget.color, fontWeight: FontWeight.w700, fontSize: 22);
+              return _RollingAmountText(text: formatted, style: style!, color: widget.color);
+            },
           ),
           Text('${(widget.percentage * 100).toStringAsFixed(1)}%',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary)),
         ]),
       ]),
+    );
+  }
+}
+
+/// Displays a string where each character uses AnimatedSwitcher for a slot-machine roll.
+class _RollingAmountText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  final Color color;
+  const _RollingAmountText({required this.text, required this.style, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: text.split('').asMap().entries.map((e) {
+        final isDigit = RegExp(r'\d').hasMatch(e.value);
+        return ClipRect(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 120),
+            transitionBuilder: (child, anim) {
+              if (!isDigit) return child;
+              return SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.7), end: Offset.zero)
+                    .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+                child: FadeTransition(opacity: anim, child: child),
+              );
+            },
+            child: Text(
+              e.value,
+              key: ValueKey('${e.key}_${e.value}'),
+              style: style,
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -189,15 +265,22 @@ class BarChartRow extends StatelessWidget {
         SizedBox(width: 72, child: Text(label, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13))),
         const SizedBox(width: 10),
         Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Stack(children: [
-              Container(height: 20, color: AppColors.surfaceVariant),
-              FractionallySizedBox(
-                widthFactor: fraction.clamp(0.0, 1.0),
-                child: Container(height: 20, decoration: BoxDecoration(color: color.withOpacity(0.85), borderRadius: BorderRadius.circular(4))),
-              ),
-            ]),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: fraction.clamp(0.0, 1.0)),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutBack,
+            builder: (_, value, __) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Stack(children: [
+                  Container(height: 20, color: AppColors.surfaceVariant),
+                  FractionallySizedBox(
+                    widthFactor: value.clamp(0.0, 1.0),
+                    child: Container(height: 20, decoration: BoxDecoration(color: color.withOpacity(0.85), borderRadius: BorderRadius.circular(4))),
+                  ),
+                ]),
+              );
+            },
           ),
         ),
         const SizedBox(width: 10),
