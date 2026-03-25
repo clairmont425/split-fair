@@ -90,14 +90,25 @@ class AppState extends ChangeNotifier {
     return communal > 0 ? communal : 0;
   }
 
-  /// Equal share of communal sqft each room absorbs for scoring purposes.
-  double get communalSqftPerRoom =>
+  /// Equal share per room (for display in info box only).
+  double get communalSqftEqualShare =>
       _rooms.isEmpty ? 0 : communalSqft / _rooms.length;
+
+  /// Communal sqft allocated to a specific room, based on its communalSharePct.
+  /// Normalizes shares across all rooms so they always add up to communalSqft total.
+  double communalSqftForRoom(Room room) {
+    if (!_communalEnabled || communalSqft <= 0 || _rooms.isEmpty) return 0;
+    final equalShare = 100.0 / _rooms.length;
+    final totalShares = _rooms.fold(0.0, (sum, r) => sum + (r.communalSharePct ?? equalShare));
+    if (totalShares <= 0) return communalSqft / _rooms.length;
+    final roomShare = room.communalSharePct ?? equalShare;
+    return (roomShare / totalShares) * communalSqft;
+  }
 
   List<SplitResult> get results => calculateSplit(
         rooms: _rooms,
         totalRent: _totalRent,
-        communalSqftPerRoom: communalSqftPerRoom,
+        communalSqftByRoom: _rooms.map((r) => communalSqftForRoom(r)).toList(),
       );
 
   AppState() { _loadFromPrefs(); }

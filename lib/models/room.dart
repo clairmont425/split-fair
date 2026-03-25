@@ -14,18 +14,20 @@ class Room {
   double noiseScore;
   double storageScore;
   int floorLevel; // 0 = ground/unknown, positive = floor number
+  double? communalSharePct; // null = use equal share
 
   Room({
     required this.id, required this.name, required this.tenant,
     this.sqft = 150, this.hasPrivateBath = false, this.hasBalcony = false,
     this.hasWalkInCloset = false, this.hasParking = false, this.hasAC = false,
     this.naturalLightScore = 5, this.noiseScore = 5, this.storageScore = 5,
-    this.floorLevel = 0,
+    this.floorLevel = 0, this.communalSharePct,
   });
 
   Room copyWith({String? name, String? tenant, double? sqft, bool? hasPrivateBath,
     bool? hasBalcony, bool? hasWalkInCloset, bool? hasParking, bool? hasAC,
-    double? naturalLightScore, double? noiseScore, double? storageScore, int? floorLevel}) {
+    double? naturalLightScore, double? noiseScore, double? storageScore, int? floorLevel,
+    double? communalSharePct}) {
     return Room(
       id: id, name: name ?? this.name, tenant: tenant ?? this.tenant,
       sqft: sqft ?? this.sqft, hasPrivateBath: hasPrivateBath ?? this.hasPrivateBath,
@@ -34,6 +36,7 @@ class Room {
       naturalLightScore: naturalLightScore ?? this.naturalLightScore,
       noiseScore: noiseScore ?? this.noiseScore, storageScore: storageScore ?? this.storageScore,
       floorLevel: floorLevel ?? this.floorLevel,
+      communalSharePct: communalSharePct,
     );
   }
 
@@ -58,6 +61,7 @@ class Room {
     'hasWalkInCloset': hasWalkInCloset, 'hasParking': hasParking, 'hasAC': hasAC,
     'naturalLightScore': naturalLightScore,
     'noiseScore': noiseScore, 'storageScore': storageScore, 'floorLevel': floorLevel,
+    'communalSharePct': communalSharePct,
   };
 
   factory Room.fromJson(Map<String, dynamic> json) => Room(
@@ -72,6 +76,7 @@ class Room {
     noiseScore: (json['noiseScore'] as num).toDouble(),
     storageScore: (json['storageScore'] as num).toDouble(),
     floorLevel: (json['floorLevel'] as num?)?.toInt() ?? 0,
+    communalSharePct: (json['communalSharePct'] as num?)?.toDouble(),
   );
 
   static String encodeList(List<Room> rooms) =>

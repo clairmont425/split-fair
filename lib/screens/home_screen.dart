@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../models/app_state.dart';
@@ -156,39 +157,9 @@ class HomeScreen extends StatelessWidget {
           final canDelete = state.rooms.length > 2;
           return KeyedSubtree(
             key: ValueKey(room.id),
-            child: Slidable(
-              key: Key('slide_${room.id}'),
+            child: _SwipeDeleteWrapper(
               enabled: canDelete,
-              endActionPane: ActionPane(
-                motion: const BehindMotion(),
-                extentRatio: 0.28,
-                dismissible: DismissiblePane(onDismissed: () => state.removeRoom(room.id)),
-                children: [
-                  CustomSlidableAction(
-                    onPressed: (_) => state.removeRoom(room.id),
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white,
-                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
-                    padding: EdgeInsets.zero,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.only(left: 8, bottom: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.delete_rounded, color: Colors.white, size: 22),
-                          SizedBox(height: 4),
-                          Text('Remove', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              onDelete: () => state.removeRoom(room.id),
               child: _RoomTile(
                 room: room, color: color, index: i,
                 onEdit: () => _openRoomEdit(context, state, room.id),
@@ -240,7 +211,13 @@ class HomeScreen extends StatelessWidget {
     final room = state.rooms.firstWhere((r) => r.id == roomId);
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => RoomEditSheet(room: room, onSave: (updated) => state.updateRoom(roomId, updated)),
+      builder: (_) => RoomEditSheet(
+        room: room,
+        onSave: (updated) => state.updateRoom(roomId, updated),
+        communalEnabled: state.communalEnabled,
+        communalSqft: state.communalSqft,
+        allRooms: state.rooms,
+      ),
     );
   }
 
@@ -472,8 +449,6 @@ class _CommunalSpaceCardState extends State<_CommunalSpaceCard> {
     final state = widget.state;
     final enabled = state.communalEnabled;
     final communal = state.communalSqft;
-    final perRoom = state.communalSqftPerRoom;
-    final numRooms = state.rooms.length;
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 250),
@@ -505,8 +480,8 @@ class _CommunalSpaceCardState extends State<_CommunalSpaceCard> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Communal space', style: Theme.of(context).textTheme.titleMedium),
-                      Text('Split shared areas equally',
+                      Text('Itemize communal space', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Assign each room\'s access in the room editor',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
                     ]),
                   ),
@@ -550,7 +525,7 @@ class _CommunalSpaceCardState extends State<_CommunalSpaceCard> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Shared areas: ${communal.toInt()} sqft ÷ $numRooms rooms = +${perRoom.toInt()} sqft added to each room\'s score',
+                            '${communal.toInt()} sqft of shared areas — set each room\'s access share using the slider in the room editor',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 12, color: AppColors.primaryDark),
                           ),
@@ -572,6 +547,149 @@ class _CommunalSpaceCardState extends State<_CommunalSpaceCard> {
         ),
       ),
     ).animate().fadeIn(duration: 300.ms, delay: 35.ms).slideY(begin: 0.05, end: 0);
+  }
+}
+
+// ─── Swipe-to-delete wrapper ──────────────────────────────────────────────────
+
+class _SwipeDeleteWrapper extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onDelete;
+  final bool enabled;
+  const _SwipeDeleteWrapper({
+    required this.child,
+    required this.onDelete,
+    this.enabled = true,
+  });
+
+  @override
+  State<_SwipeDeleteWrapper> createState() => _SwipeDeleteWrapperState();
+}
+
+class _SwipeDeleteWrapperState extends State<_SwipeDeleteWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _anim;
+  double _offsetX = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController.unbounded(vsync: this)
+      ..addListener(() {
+        if (mounted) setState(() => _offsetX = _anim.value);
+      });
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  void _onDragStart(DragStartDetails _) => _anim.stop();
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (!widget.enabled) return;
+    setState(() => _offsetX = (_offsetX + d.delta.dx).clamp(-400.0, 12.0));
+  }
+
+  void _onDragEnd(DragEndDetails d) async {
+    if (!widget.enabled) return;
+    final width = MediaQuery.of(context).size.width;
+    final pastThreshold = -_offsetX > width * 0.35;
+    final fastFling = d.velocity.pixelsPerSecond.dx < -700;
+
+    if (pastThreshold || fastFling) {
+      HapticFeedback.mediumImpact();
+      _anim.animateTo(
+        -(width + 60),
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeIn,
+      ).then((_) => widget.onDelete());
+    } else {
+      final sim = SpringSimulation(
+        const SpringDescription(mass: 1, stiffness: 380, damping: 32),
+        _offsetX,
+        0.0,
+        d.velocity.pixelsPerSecond.dx,
+      );
+      _anim.animateWith(sim);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final progress = (-_offsetX / width).clamp(0.0, 1.0);
+    final rotation = -progress * 0.055;
+    final scale = 1.0 - progress * 0.028;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragStart: widget.enabled ? _onDragStart : null,
+      onHorizontalDragUpdate: widget.enabled ? _onDragUpdate : null,
+      onHorizontalDragEnd: widget.enabled ? _onDragEnd : null,
+      child: Stack(clipBehavior: Clip.none, children: [
+        // ── Gradient delete background ─────────────────────────────────────
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.error.withValues(alpha: (progress * 0.55).clamp(0.0, 0.55)),
+                    AppColors.error.withValues(alpha: (0.4 + progress * 0.6).clamp(0.0, 1.0)),
+                  ],
+                  stops: [
+                    (0.45 - progress * 0.2).clamp(0.0, 1.0),
+                    (0.72 - progress * 0.1).clamp(0.0, 1.0),
+                    1.0,
+                  ],
+                ),
+              ),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 22),
+                  child: Opacity(
+                    opacity: (progress * 2.2).clamp(0.0, 1.0),
+                    child: Transform.scale(
+                      scale: (progress * 1.6).clamp(0.0, 1.0),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.delete_rounded, color: Colors.white, size: 24),
+                          SizedBox(height: 3),
+                          Text('Remove',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        // ── Card with Tinder-style transform ──────────────────────────────
+        Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..translate(_offsetX, 0.0)
+            ..rotateZ(rotation)
+            ..scale(scale),
+          child: widget.child,
+        ),
+      ]),
+    );
   }
 }
 

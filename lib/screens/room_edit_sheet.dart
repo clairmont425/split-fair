@@ -9,7 +9,17 @@ import '../widgets/score_breakdown.dart';
 class RoomEditSheet extends StatefulWidget {
   final Room room;
   final ValueChanged<Room> onSave;
-  const RoomEditSheet({super.key, required this.room, required this.onSave});
+  final bool communalEnabled;
+  final double communalSqft;
+  final List<Room> allRooms;
+  const RoomEditSheet({
+    super.key,
+    required this.room,
+    required this.onSave,
+    this.communalEnabled = false,
+    this.communalSqft = 0,
+    this.allRooms = const [],
+  });
   @override
   State<RoomEditSheet> createState() => _RoomEditSheetState();
 }
@@ -20,6 +30,7 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
   late TextEditingController _tenantCtrl;
   late TextEditingController _sqftCtrl;
   late TextEditingController _floorCtrl;
+  late double _communalSharePct;
 
   @override
   void initState() {
@@ -29,6 +40,19 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
     _tenantCtrl = TextEditingController(text: _room.tenant);
     _sqftCtrl = TextEditingController(text: _room.sqft.toInt().toString());
     _floorCtrl = TextEditingController(text: _room.floorLevel > 0 ? _room.floorLevel.toString() : '');
+    final _equalShare = widget.allRooms.isEmpty ? 50.0 : 100.0 / widget.allRooms.length;
+    _communalSharePct = widget.room.communalSharePct ?? _equalShare;
+  }
+
+  double get _communalSqftPreview {
+    if (!widget.communalEnabled || widget.communalSqft <= 0 || widget.allRooms.isEmpty) return 0;
+    final equalShare = 100.0 / widget.allRooms.length;
+    final otherPcts = widget.allRooms
+        .where((r) => r.id != widget.room.id)
+        .fold(0.0, (sum, r) => sum + (r.communalSharePct ?? equalShare));
+    final totalPct = otherPcts + _communalSharePct;
+    if (totalPct <= 0) return 0;
+    return (_communalSharePct / totalPct) * widget.communalSqft;
   }
 
   @override
@@ -47,6 +71,7 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
       tenant: _tenantCtrl.text.trim().isNotEmpty ? _tenantCtrl.text.trim() : _room.tenant,
       sqft: parsedSqft,
       floorLevel: int.tryParse(_floorCtrl.text) ?? 0,
+      communalSharePct: widget.communalEnabled ? _communalSharePct : null,
     ));
     Navigator.pop(context);
   }
@@ -106,6 +131,69 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
               LabeledSlider(label: 'Quietness', value: _room.noiseScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Noisy' : v.toInt() < 7 ? 'Moderate' : 'Quiet', onChanged: (v) => setState(() { _room = _room.copyWith(noiseScore: v); })),
               const SizedBox(height: 4),
               LabeledSlider(label: 'Storage space', value: _room.storageScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Minimal' : v.toInt() < 7 ? 'Average' : 'Plenty', onChanged: (v) => setState(() { _room = _room.copyWith(storageScore: v); })),
+              if (widget.communalEnabled && widget.communalSqft > 0) ...[
+                const SizedBox(height: 24),
+                const SectionHeader(label: 'Communal space access'),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      const Icon(Icons.house_rounded, size: 15, color: AppColors.primaryDark),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'How much of the shared areas does this room get access to?',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12, color: AppColors.primaryDark),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 14),
+                    Row(children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: AppColors.primary,
+                            thumbColor: AppColors.primary,
+                            inactiveTrackColor: AppColors.primary.withOpacity(0.18),
+                            overlayColor: AppColors.primary.withOpacity(0.1),
+                          ),
+                          child: Slider(
+                            value: _communalSharePct.clamp(0.0, 100.0),
+                            min: 0,
+                            max: 100,
+                            divisions: 100,
+                            onChanged: (v) => setState(() => _communalSharePct = v),
+                          ),
+                        ),
+                      ),
+                    ]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text(
+                        '${_communalSharePct.toStringAsFixed(0)}% share',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.primaryDark),
+                      ),
+                      Text(
+                        '≈ ${_communalSqftPreview.toStringAsFixed(0)} sqft',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 13, color: AppColors.primaryDark.withOpacity(0.75)),
+                      ),
+                    ]),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Equal share would be ${(100.0 / widget.allRooms.length).toStringAsFixed(1)}%  (${(widget.communalSqft / widget.allRooms.length).toStringAsFixed(0)} sqft)',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 11, color: AppColors.primaryDark.withOpacity(0.55)),
+                    ),
+                  ]),
+                ),
+              ],
               const SizedBox(height: 24),
               ScoreBreakdown(room: _room),
             ]).animate().fadeIn(duration: 250.ms).slideY(begin: 0.03, end: 0),
