@@ -94,6 +94,19 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
   @override
   void dispose() { _nameCtrl.dispose(); _tenantCtrl.dispose(); _sqftCtrl.dispose(); _floorCtrl.dispose(); super.dispose(); }
 
+  void _showCommunalInfo() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('About Communal Space'),
+        content: const Text(
+          'Communal spaces are areas in the home other than the bedrooms — living room, kitchen, bathrooms, etc. Uncheck this if a roommate has more or less access to the home than others, then adjust sliders accordingly.',
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got it'))],
+      ),
+    );
+  }
+
   void _save() {
     final parsedSqft = double.tryParse(_sqftCtrl.text) ?? _room.sqft;
     if (parsedSqft < 50) {
@@ -174,7 +187,13 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
               LabeledSlider(label: 'Storage space', value: _room.storageScore, divisions: 10, format: (v) => v.toInt() < 4 ? 'Minimal' : v.toInt() < 7 ? 'Average' : 'Plenty', onChanged: (v) => setState(() { _room = _room.copyWith(storageScore: v); })),
               if (widget.communalEnabled && widget.communalSqft > 0 && widget.allRooms.length > 1) ...[
                 const SizedBox(height: 24),
-                const SectionHeader(label: 'Communal space access'),
+                SectionHeader(
+                  label: 'Communal space access',
+                  trailing: GestureDetector(
+                    onTap: _showCommunalInfo,
+                    child: const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.primary),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(14),
