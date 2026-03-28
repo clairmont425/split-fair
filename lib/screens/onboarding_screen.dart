@@ -231,6 +231,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       autofillHints: const [],
                       autocorrect: false,
                       enableSuggestions: false,
+                      enableIMEPersonalizedLearning: false,
+                      textInputAction: TextInputAction.next,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                       decoration: const InputDecoration.collapsed(
                         hintText: '2,500',
@@ -258,6 +260,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         autofillHints: const [],
                         autocorrect: false,
                         enableSuggestions: false,
+                        enableIMEPersonalizedLearning: false,
+                        textInputAction: TextInputAction.next,
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: '1,200 sqft',
@@ -279,14 +283,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: _addressCtrl,
+                        keyboardType: TextInputType.text,
                         textCapitalization: TextCapitalization.words,
                         autofillHints: const [],
                         autocorrect: false,
                         enableSuggestions: false,
+                        enableIMEPersonalizedLearning: false,
+                        textInputAction: TextInputAction.done,
                         style: const TextStyle(fontSize: 16),
                         decoration: InputDecoration(
                           hintText: 'Apt 4B',
-                          prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _stitchGreen, width: 1.5)),
@@ -407,6 +413,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           final hasInteraction = interactiveContent != null;
 
           return _StitchSlide(
+            key: ValueKey('slide_$index'),
             data: slide,
             isActive: isActive,
             interactiveContent: interactiveContent,
@@ -415,7 +422,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             isLast: isLast,
             currentPage: _page,
             totalPages: _slides.length,
-            initialCardSize: hasInteraction ? 0.52 : 0.38,
+            heroFraction: hasInteraction ? 0.38 : 0.48,
+            cardExpanded: index == 3 && !_communalEqual,
           );
         },
       ),
@@ -423,9 +431,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-// ── Stitch-style slide: hero photo + draggable white card ────────────────────
+// ── Stitch-style slide: fixed hero + draggable white card ─────────────────────
 
-class _StitchSlide extends StatelessWidget {
+class _StitchSlide extends StatefulWidget {
   final _SlideData data;
   final bool isActive;
   final Widget? interactiveContent;
@@ -434,9 +442,11 @@ class _StitchSlide extends StatelessWidget {
   final bool isLast;
   final int currentPage;
   final int totalPages;
-  final double initialCardSize;
+  final double heroFraction;
+  final bool cardExpanded;
 
   const _StitchSlide({
+    super.key,
     required this.data,
     required this.isActive,
     this.interactiveContent,
@@ -445,30 +455,59 @@ class _StitchSlide extends StatelessWidget {
     required this.isLast,
     required this.currentPage,
     required this.totalPages,
-    this.initialCardSize = 0.52,
+    this.heroFraction = 0.42,
+    this.cardExpanded = false,
   });
+
+  @override
+  State<_StitchSlide> createState() => _StitchSlideState();
+}
+
+class _StitchSlideState extends State<_StitchSlide> {
+  final DraggableScrollableController _sheetCtrl = DraggableScrollableController();
+
+  @override
+  void didUpdateWidget(covariant _StitchSlide old) {
+    super.didUpdateWidget(old);
+    if (widget.cardExpanded && !old.cardExpanded && _sheetCtrl.isAttached) {
+      _sheetCtrl.animateTo(0.80,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    }
+  }
+
+  @override
+  void dispose() {
+    _sheetCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    final screenH = MediaQuery.of(context).size.height;
+    final heroH = screenH * widget.heroFraction;
+    final overlap = 24.0;
+    final initialSize = (1.0 - widget.heroFraction + overlap / screenH).clamp(0.25, 0.85);
 
     return Stack(
       children: [
-        // ── Hero photo — fills entire background ──────────────────────
-        Positioned.fill(
+        // ── Hero photo — fixed at top ───────────────────────────────
+        Positioned(
+          top: 0, left: 0, right: 0,
+          height: heroH,
           child: Image.asset(
-            data.heroImage,
+            widget.data.heroImage,
             fit: BoxFit.cover,
             alignment: Alignment.topCenter,
           ),
         ),
 
-        // ── Skip button ───────────────────────────────────────────────
+        // ── Skip button ─────────────────────────────────────────────
         Positioned(
           top: topPad + 8,
           right: 16,
           child: GestureDetector(
-            onTap: onSkip,
+            onTap: widget.onSkip,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
@@ -480,14 +519,14 @@ class _StitchSlide extends StatelessWidget {
           ),
         ),
 
-        // ── Category label ────────────────────────────────────────────
-        if (data.categoryLabel != null)
+        // ── Category label ──────────────────────────────────────────
+        if (widget.data.categoryLabel != null)
           Positioned(
             top: topPad + 12,
             left: 0, right: 60,
             child: Center(
               child: Text(
-                data.categoryLabel!,
+                widget.data.categoryLabel!,
                 style: TextStyle(
                   fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.5,
                   color: Colors.white.withValues(alpha: 0.9),
@@ -496,11 +535,12 @@ class _StitchSlide extends StatelessWidget {
             ),
           ),
 
-        // ── Scrollable white card from bottom ─────────────────────────
+        // ── Draggable white card ────────────────────────────────────
         DraggableScrollableSheet(
-          initialChildSize: initialCardSize,
+          controller: _sheetCtrl,
+          initialChildSize: initialSize,
           minChildSize: 0.25,
-          maxChildSize: 0.85,
+          maxChildSize: 0.90,
           builder: (context, scrollController) {
             return Container(
               decoration: const BoxDecoration(
@@ -531,9 +571,9 @@ class _StitchSlide extends StatelessWidget {
                       color: _stitchGreen.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(data.icon, size: 24, color: _stitchGreen),
+                    child: Icon(widget.data.icon, size: 24, color: _stitchGreen),
                   )
-                  .animate(target: isActive ? 1 : 0)
+                  .animate(target: widget.isActive ? 1 : 0)
                   .fadeIn(duration: 300.ms)
                   .slideY(begin: 0.2, end: 0, duration: 300.ms),
 
@@ -541,26 +581,26 @@ class _StitchSlide extends StatelessWidget {
 
                   // Headline
                   Text(
-                    data.headline,
+                    widget.data.headline,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary, height: 1.2),
                   )
-                  .animate(target: isActive ? 1 : 0)
+                  .animate(target: widget.isActive ? 1 : 0)
                   .fadeIn(duration: 350.ms, delay: 50.ms),
 
                   const SizedBox(height: 8),
 
                   // Body
                   Text(
-                    data.body,
+                    widget.data.body,
                     style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
                   )
-                  .animate(target: isActive ? 1 : 0)
+                  .animate(target: widget.isActive ? 1 : 0)
                   .fadeIn(duration: 400.ms, delay: 100.ms),
 
                   // Interactive content
-                  if (interactiveContent != null) ...[
+                  if (widget.interactiveContent != null) ...[
                     const SizedBox(height: 16),
-                    interactiveContent!,
+                    widget.interactiveContent!,
                   ],
 
                   const SizedBox(height: 24),
@@ -568,8 +608,8 @@ class _StitchSlide extends StatelessWidget {
                   // Dots
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(totalPages, (i) {
-                      final active = i == currentPage;
+                    children: List.generate(widget.totalPages, (i) {
+                      final active = i == widget.currentPage;
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -585,12 +625,12 @@ class _StitchSlide extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // Next button (inside the scrollable card)
+                  // Next button
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: onNext,
+                      onPressed: widget.onNext,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _stitchGreen,
                         foregroundColor: Colors.white,
@@ -601,7 +641,7 @@ class _StitchSlide extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            isLast ? "Let's settle this" : 'Next',
+                            widget.isLast ? "Let's settle this" : 'Next',
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(width: 8),
@@ -633,13 +673,12 @@ class _CircleButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44, height: 44,
+        width: 48, height: 48,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: enabled ? _stitchCream : AppColors.border.withValues(alpha: 0.3),
-          border: Border.all(color: enabled ? AppColors.border : AppColors.border.withValues(alpha: 0.3)),
+          color: enabled ? _stitchGreen : AppColors.border.withValues(alpha: 0.3),
         ),
-        child: Icon(icon, size: 22, color: enabled ? AppColors.textPrimary : AppColors.border),
+        child: Icon(icon, size: 24, color: enabled ? Colors.white : AppColors.border),
       ),
     );
   }
@@ -677,4 +716,3 @@ class _ChoiceChip extends StatelessWidget {
     );
   }
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
