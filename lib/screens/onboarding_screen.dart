@@ -50,7 +50,7 @@ const _slides = [
     categoryLabel: 'WELCOME',
     icon: Icons.balance_rounded,
     headline: 'Welcome to Split Fair',
-    body: 'Finally, an app that settles the age-old question:\n"Why is Chad paying the same rent as me when his room has a window AND a closet?"\n\nSpoiler: he shouldn\'t be.',
+    body: 'Finally, an app that settles the age-old question:\n"Why is Chad paying the same rent as me when his room has a window AND a closet?"\n\nSpoiler: He shouldn\'t be.',
   ),
   // 1 — Size Matters (interactive: rent, sqft, address)
   _SlideData(
@@ -66,7 +66,7 @@ const _slides = [
     categoryLabel: 'CAPACITY',
     icon: Icons.bedroom_parent_rounded,
     headline: 'How Many Rooms?',
-    body: 'Bedrooms only — we\'re splitting rent, not staging Cribs.',
+    body: 'How many bedrooms need a reality check?',
   ),
   // 3 — Shared Spaces (interactive)
   _SlideData(
@@ -74,7 +74,15 @@ const _slides = [
     categoryLabel: 'COMMON AREAS',
     icon: Icons.people_rounded,
     headline: 'Shared Spaces',
-    body: 'Does everyone have equal access to the living room, kitchen, and common areas?',
+    body: 'Does everyone have equal access to the living room, kitchen, and other common areas?',
+  ),
+  // 4 — Everyone on the Same Page (static)
+  _SlideData(
+    heroImage: 'assets/images/results_highfive.png',
+    categoryLabel: 'THE VERDICT',
+    icon: Icons.handshake_rounded,
+    headline: 'Everyone on the Same Page',
+    body: 'Save your configs, share the breakdown with roommates, or export a PDF. No more arguments — just math.',
   ),
 ];
 
@@ -99,27 +107,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     TextEditingController(),
   ];
   bool _communalEqual = true;
-  List<double> _communalPcts = [50.0, 50.0];
 
   void _setNumRooms(int n) {
     setState(() {
       _numRooms = n;
       while (_roomSqftCtrls.length < n) _roomSqftCtrls.add(TextEditingController());
       while (_roomSqftCtrls.length > n) _roomSqftCtrls.removeLast().dispose();
-      _communalPcts = List.generate(n, (_) => 100.0 / n);
     });
   }
 
-  void _setCommunalPct(int roomIndex, double value) {
-    setState(() {
-      _communalPcts[roomIndex] = value;
-      final remaining = (100.0 - value).clamp(0.0, 100.0);
-      final others = _numRooms - 1;
-      for (var i = 0; i < _numRooms; i++) {
-        if (i != roomIndex) _communalPcts[i] = others > 0 ? remaining / others : 0;
-      }
-    });
-  }
 
   void _next() {
     if (_page < _slides.length - 1) {
@@ -175,9 +171,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     if (!_communalEqual) {
+      // Set each room to an explicit equal share (non-null communalSharePct)
+      // so the room editor shows the customize sliders for each room.
+      final equalPct = 100.0 / state.rooms.length;
       final idToSharePct = <String, double>{};
-      for (var i = 0; i < state.rooms.length && i < _communalPcts.length; i++) {
-        idToSharePct[state.rooms[i].id] = _communalPcts[i];
+      for (final room in state.rooms) {
+        idToSharePct[room.id] = equalPct;
       }
       state.updateAllCommunalShares(idToSharePct);
     }
@@ -212,36 +211,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const Text('TOTAL MONTHLY RENT',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: _stitchAmber)),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: _stitchCream,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _stitchGreen, width: 1.5),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  const Text('\$', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: _stitchGreen)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _totalRentCtrl,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      autofillHints: const [],
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      enableIMEPersonalizedLearning: false,
-                      textInputAction: TextInputAction.next,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                      decoration: const InputDecoration.collapsed(
-                        hintText: '2,500',
-                        hintStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w300, color: AppColors.border),
-                      ),
-                    ),
-                  ),
-                  const Text('/mo', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                ],
+            TextField(
+              controller: _totalRentCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              autofillHints: const [],
+              autocorrect: false,
+              enableSuggestions: false,
+              enableIMEPersonalizedLearning: false,
+              textInputAction: TextInputAction.next,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: '\$2,500 /mo',
+                hintStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w300, color: AppColors.border),
+                prefixText: '\$ ',
+                prefixStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: _stitchGreen),
+                suffixText: '/mo',
+                suffixStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _stitchGreen, width: 1.5)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _stitchGreen, width: 1.5)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _stitchGreen, width: 2)),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
             const SizedBox(height: 14),
@@ -311,7 +303,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return Column(
           children: [
             Text(
-              "Don't count the \"flex space\" your landlord called a bedroom.",
+              "The master suite and the converted closet are about to have a very different conversation.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.textTertiary, height: 1.5),
             ),
@@ -350,41 +342,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             const SizedBox(height: 10),
             _ChoiceChip(
-              label: "No — I'll customize per room",
+              label: "No — I'll customize in the room editor",
               icon: Icons.tune_rounded,
               selected: !_communalEqual,
               onTap: () => setState(() => _communalEqual = false),
             ),
-            if (!_communalEqual) ...[
-              const SizedBox(height: 16),
-              ...List.generate(_numRooms, (i) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Room ${i + 1}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                        Text('${_communalPcts[i].round()}%', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _stitchGreen)),
-                      ],
-                    ),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 4,
-                        activeTrackColor: _stitchGreen,
-                        thumbColor: _stitchGreen,
-                        inactiveTrackColor: AppColors.border,
-                      ),
-                      child: Slider(
-                        value: _communalPcts[i].clamp(0.0, 100.0),
-                        min: 0, max: 100, divisions: 20,
-                        onChanged: (v) => _setCommunalPct(i, v),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-            ],
             const SizedBox(height: 16),
           ],
         );
@@ -423,7 +385,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             currentPage: _page,
             totalPages: _slides.length,
             heroFraction: hasInteraction ? 0.38 : 0.48,
-            cardExpanded: index == 3 && !_communalEqual,
+            cardExpanded: false,
           );
         },
       ),

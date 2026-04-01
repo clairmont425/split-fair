@@ -88,11 +88,11 @@ class _PaywallSheetState extends State<PaywallSheet> {
           ),
         ).animate().scale(duration: 450.ms, curve: Curves.elasticOut),
         const SizedBox(height: 20),
-        Text('Unlock PDF Export', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22), textAlign: TextAlign.center),
+        Text('Unlock Premium', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22), textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        Text('Get a beautiful, shareable PDF of your rent split.', style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center),
+        Text('One purchase unlocks everything — save configurations and export PDFs.', style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center),
         const SizedBox(height: 24),
-        ...[('Printable PDF with all room details', Icons.print_rounded), ('Professional layout', Icons.home_work_rounded), ('One-time purchase, yours forever', Icons.all_inclusive_rounded)].map((f) =>
+        ...[('Save up to 10 room configurations', Icons.bookmark_rounded), ('Download a shareable PDF of your split', Icons.picture_as_pdf_rounded), ('Professional printable layout', Icons.home_work_rounded), ('One-time purchase, yours forever', Icons.all_inclusive_rounded)].map((f) =>
           Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(children: [
             Container(width: 32, height: 32, decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)), child: Icon(f.$2, size: 16, color: AppColors.primary)),
             const SizedBox(width: 12),
@@ -105,7 +105,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
         ),
         const SizedBox(height: 12),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Maybe later')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('No thank you')),
           const SizedBox(width: 8),
           TextButton(onPressed: _restore, child: const Text('Restore')),
         ]),

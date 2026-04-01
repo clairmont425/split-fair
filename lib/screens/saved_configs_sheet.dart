@@ -80,6 +80,7 @@ class _SavedConfigsSheetState extends State<SavedConfigsSheet> {
           'Save for different apartments you\'re considering',
           'Compare "Room A gets master" vs "Room B gets master"',
           'Load any setup in one tap',
+          'Download a shareable PDF of your split',
         ].map((f) => Padding(padding: const EdgeInsets.only(bottom: 6),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.primary),
@@ -88,7 +89,8 @@ class _SavedConfigsSheetState extends State<SavedConfigsSheet> {
           ]))),
       ]),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Maybe later')),
+        TextButton(onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
+          child: const Text('No thank you')),
         ElevatedButton(
           onPressed: () { Navigator.pop(ctx); _simulatePurchase(state); },
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white, minimumSize: const Size(120, 40)),

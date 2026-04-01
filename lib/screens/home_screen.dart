@@ -352,31 +352,18 @@ class _SavedTab extends StatefulWidget {
 }
 
 class _SavedTabState extends State<_SavedTab> {
-  static bool _hasShownSheet = false;
+  static bool _hasSeenIntro = false;
 
-  @override
-  void initState() {
-    super.initState();
-    if (!_hasShownSheet) {
-      _hasShownSheet = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => ChangeNotifierProvider.value(
-              value: widget.state,
-              child: const SavedConfigsSheet(),
-            ),
-          );
-        }
-      });
-    }
+  void _dismissIntro() {
+    setState(() => _hasSeenIntro = true);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasSeenIntro) {
+      return _SavedIntroScreen(onDismiss: _dismissIntro);
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surfaceVariant,
       appBar: AppBar(
@@ -394,6 +381,128 @@ class _SavedTabState extends State<_SavedTab> {
         value: widget.state,
         child: _SavedResultsBody(onLoaded: widget.onLoaded),
       ),
+    );
+  }
+}
+
+// ── Saved Tab Intro (first-tap only) ─────────────────────────────────────────
+
+class _SavedIntroScreen extends StatelessWidget {
+  final VoidCallback onDismiss;
+  const _SavedIntroScreen({required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surfaceVariant,
+      body: Column(
+        children: [
+          // Hero image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+            child: Image.asset(
+              'assets/images/hero_moving_boxes.jpg',
+              height: 260,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.bookmark_rounded, size: 24, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Save Your Configs',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Tyler is joining in March. Priya is leaving in June. You are NOT doing this math by hand again.',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+                  ),
+                  const SizedBox(height: 24),
+                  // Mock config cards
+                  _MockConfigCard(name: 'Apt 4B', detail: '3 rooms · \$3,200/mo', status: 'ACTIVE', isActive: true),
+                  const SizedBox(height: 10),
+                  _MockConfigCard(name: 'Old Place', detail: '2 rooms · \$2,800/mo', status: 'ARCHIVED', isActive: false),
+                  const Spacer(),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: onDismiss,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Got it', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockConfigCard extends StatelessWidget {
+  final String name;
+  final String detail;
+  final String status;
+  final bool isActive;
+  const _MockConfigCard({required this.name, required this.detail, required this.status, required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(children: [
+        Container(
+          width: 4, height: 36,
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.primary : AppColors.border,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Text(detail, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ]),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.primaryLight : AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: isActive ? AppColors.primary : AppColors.border, width: 1),
+          ),
+          child: Text(status, style: TextStyle(
+            fontSize: 10, fontWeight: FontWeight.w600,
+            color: isActive ? AppColors.primary : AppColors.textTertiary,
+          )),
+        ),
+      ]),
     );
   }
 }
@@ -431,15 +540,24 @@ class _SavedResultsBody extends StatelessWidget {
 
     if (results.isEmpty) {
       return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.calculate_outlined, size: 56, color: AppColors.border),
-          const SizedBox(height: 16),
-          const Text('No saved splits yet', style: TextStyle(fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 6),
-          const Text('Hit "Calculate fair split" on the Home tab\nto auto-save your first result.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.textTertiary, height: 1.5)),
-        ]),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Image.asset(
+              'assets/images/empty_state.png',
+              width: 200,
+              height: 140,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(Icons.calculate_outlined, size: 56, color: AppColors.border),
+            ),
+            const SizedBox(height: 20),
+            const Text('No saved splits yet', style: TextStyle(fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            const Text('Hit "Calculate fair split" on the Home tab\nto auto-save your first result.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.textTertiary, height: 1.5)),
+          ]),
+        ),
       );
     }
 

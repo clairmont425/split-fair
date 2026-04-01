@@ -232,13 +232,21 @@ class _SummaryCardState extends State<_SummaryCard> with SingleTickerProviderSta
                       painter: _DonutPainter(slices: slices, progress: progress),
                       child: Center(
                         child: Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
                             color: AppColors.primaryLight,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.balance_rounded, size: 26, color: AppColors.primary),
+                          clipBehavior: Clip.antiAlias,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Image.asset(
+                              'assets/images/scale_watermark.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.balance_rounded, size: 26, color: AppColors.primary),
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -263,7 +271,7 @@ class _SummaryCardState extends State<_SummaryCard> with SingleTickerProviderSta
                         Expanded(
                           child: Text(
                             e.value.room.tenant,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13, fontWeight: FontWeight.w500),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -271,11 +279,11 @@ class _SummaryCardState extends State<_SummaryCard> with SingleTickerProviderSta
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                           Text(
                             '\$${e.value.amount.toStringAsFixed(0)}/mo',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color),
                           ),
                           Text(
                             '${(e.value.percentage * 100).toStringAsFixed(0)}%',
-                            style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                           ),
                         ]),
                       ]),
@@ -430,8 +438,9 @@ class _StitchAmountCardState extends State<_StitchAmountCard> with SingleTickerP
                 // Name + room label
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(room.tenant, style: Theme.of(context).textTheme.titleMedium),
-                    Text(room.name, style: Theme.of(context).textTheme.bodyMedium),
+                    Text(room.tenant, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(room.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
                   ]),
                 ),
                 // Dollar amount + percentage badge
@@ -441,9 +450,9 @@ class _StitchAmountCardState extends State<_StitchAmountCard> with SingleTickerP
                     builder: (_, __) {
                       final displayed = widget.result.amount * _anim.value;
                       return Text(
-                        '\$${displayed.toStringAsFixed(2)}/mo',
+                        '\$${displayed.toStringAsFixed(0)}',
                         style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700, color: widget.color,
+                          fontSize: 20, fontWeight: FontWeight.w800, color: widget.color,
                         ),
                       );
                     },

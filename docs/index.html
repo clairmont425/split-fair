@@ -9,6 +9,28 @@
   <meta property="og:description" content="Calculate what each roommate should actually pay based on room size, private bath, natural light, and more." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://clairmont425.github.io/split-fair/" />
+  <link rel="canonical" href="https://clairmont425.github.io/split-fair/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Split Fair — Fair Rent Splits Based on Room Value" />
+  <meta name="twitter:description" content="Calculate what each roommate should actually pay based on room size, private bath, natural light, and more." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2300694C'/><text x='50' y='68' text-anchor='middle' font-size='50' fill='white'>⚖</text></svg>" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Split Fair",
+    "operatingSystem": "iOS",
+    "applicationCategory": "FinanceApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "Split Fair calculates what each roommate should pay based on room size, features, and quality. No more arguments. Just math.",
+    "url": "https://clairmont425.github.io/split-fair/",
+    "downloadUrl": "https://apps.apple.com/app/id6761033612"
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -137,6 +159,49 @@
       color: rgba(255,255,255,0.6);
       text-decoration: none;
       z-index: 1;
+    }
+    .store-badges {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      z-index: 1;
+      margin-bottom: 8px;
+    }
+    .store-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #000;
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .store-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .store-badge svg { width: 28px; height: 28px; flex-shrink: 0; }
+    .store-badge .badge-text { text-align: left; line-height: 1.2; }
+    .store-badge .badge-text .small { font-size: 10px; font-weight: 400; opacity: 0.85; display: block; }
+    .store-badge .badge-text .big { font-size: 16px; font-weight: 600; display: block; }
+    .store-badge.coming-soon { opacity: 0.5; cursor: default; position: relative; }
+    .store-badge.coming-soon .badge-label {
+      position: absolute;
+      top: -8px; right: -8px;
+      background: var(--amber);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     /* ── PHONE MOCKUP ────────────────────────── */
@@ -355,6 +420,38 @@
       color: #fff;
     }
 
+    /* ── FAQ ─────────────────────────────────── */
+    .faq {
+      padding: 80px 24px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .faq h2 {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .faq-item {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .faq-item h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .faq-item p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
     /* ── FOOTER ───────────────────────────────── */
     footer {
       padding: 32px 24px;
@@ -390,20 +487,28 @@
     <h1>Fair rent splits based on <span>room value</span></h1>
     <p>Stop splitting rent equally when the rooms aren't equal. Split Fair scores each room and calculates what each person should actually pay.</p>
     <div class="cta-group">
-      <a href="https://apps.apple.com/app/split-fair-rent-calculator/id6761033612" class="cta-primary">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Download for iOS
-      </a>
+      <div class="store-badges">
+        <a href="https://apps.apple.com/app/id6761033612" class="store-badge" aria-label="Download on the App Store">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div class="badge-text">
+            <span class="small">Download on the</span>
+            <span class="big">App Store</span>
+          </div>
+        </a>
+        <a href="#" class="store-badge coming-soon" aria-label="Get it on Google Play — Coming Soon" onclick="return false;">
+          <span class="badge-label">Soon</span>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.302 1.33-3.39 1.963-2.122-2.122 3.21-1.171zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
+          <div class="badge-text">
+            <span class="small">GET IT ON</span>
+            <span class="big">Google Play</span>
+          </div>
+        </a>
+      </div>
       <a href="#how-it-works" class="cta-secondary">See how it works ↓</a>
     </div>
     <div class="phone-frame">
       <div class="phone-notch"></div>
-      <!-- Placeholder — replace with actual app screenshot -->
-      <div style="width:100%;height:100%;background:linear-gradient(180deg,var(--green-light) 0%,var(--surface) 40%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;">
-        <div style="font-size:48px;margin-bottom:12px;">⚖️</div>
-        <div style="font-size:20px;font-weight:800;color:var(--green);margin-bottom:6px;">Split Fair</div>
-        <div style="font-size:13px;color:var(--text-secondary);text-align:center;">Fair rent for every room</div>
-      </div>
+      <img src="phone-mockup.png" alt="Split Fair results screen showing fair rent splits for each roommate" />
     </div>
   </section>
 
@@ -516,10 +621,31 @@
   <section class="final-cta">
     <h2>Stop overpaying for the worst room</h2>
     <p>Download Split Fair and let the math settle it.</p>
-    <a href="https://apps.apple.com/app/split-fair-rent-calculator/id6761033612" class="cta-primary">
+    <a href="https://apps.apple.com/app/id6761033612" class="cta-primary">
       <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
       Download for iOS — Free
     </a>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq">
+    <h2>Frequently asked questions</h2>
+    <div class="faq-item">
+      <h3>How does the algorithm decide what each person pays?</h3>
+      <p>Each room gets a score based on square footage, binary features (private bath, parking, balcony, etc.), and quality ratings for natural light, noise level, and storage. The total rent is then split proportionally to each room's score — a room with 30% of the total score pays 30% of the rent.</p>
+    </div>
+    <div class="faq-item">
+      <h3>Is it really free?</h3>
+      <p>Yes. The core calculator, visual breakdown, sharing, and communal space splitting are all free with no limits. Optional one-time purchases ($1.99 each) unlock PDF export and the ability to save multiple configurations — but you never need them to get a fair split.</p>
+    </div>
+    <div class="faq-item">
+      <h3>What if my roommates disagree with the result?</h3>
+      <p>The whole point is transparency. Every roommate can see exactly how each room was scored and why the numbers came out the way they did. You can adjust weights, re-rate quality scores, and re-run the calculation until everyone agrees the inputs are fair.</p>
+    </div>
+    <div class="faq-item">
+      <h3>Does it work for any number of roommates?</h3>
+      <p>Split Fair works for 2 to 10+ rooms. Whether you're in a 2-bedroom apartment or a large shared house, just add each room and the algorithm handles the rest.</p>
+    </div>
   </section>
 
   <!-- FOOTER -->
