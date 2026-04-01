@@ -146,7 +146,9 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
     final roomIdx = widget.allRooms.indexWhere((r) => r.id == widget.room.id);
     final roomColor = roomIdx >= 0 ? AppColors.roomColors[roomIdx % AppColors.roomColors.length] : AppColors.primary;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
       decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         // ── Hero image header (Natural Light style) ──────────────────
@@ -448,6 +450,7 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
           ),
         ),
       ]),
+    ),
     );
   }
 }

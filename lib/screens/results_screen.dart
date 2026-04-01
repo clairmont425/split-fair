@@ -105,7 +105,14 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   void _shareText(BuildContext context, List<SplitResult> results, double total) {
-    Share.share(_buildShareText(results, total), subject: 'Fair rent split breakdown');
+    final box = context.findRenderObject() as RenderBox?;
+    Share.share(
+      _buildShareText(results, total),
+      subject: 'Fair rent split breakdown',
+      sharePositionOrigin: box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : Rect.zero,
+    );
   }
 
   void _copyToClipboard(BuildContext context, List<SplitResult> results, double total) {
@@ -238,15 +245,7 @@ class _SummaryCardState extends State<_SummaryCard> with SingleTickerProviderSta
                             color: AppColors.primaryLight,
                             shape: BoxShape.circle,
                           ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Image.asset(
-                              'assets/images/scale_watermark.png',
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.balance_rounded, size: 26, color: AppColors.primary),
-                            ),
-                          ),
+                          child: const Icon(Icons.balance_rounded, size: 28, color: AppColors.primary),
                         ),
                       ),
                     );
@@ -269,23 +268,18 @@ class _SummaryCardState extends State<_SummaryCard> with SingleTickerProviderSta
                         ),
                         const SizedBox(width: 8),
                         Expanded(
+                          flex: 3,
                           child: Text(
                             e.value.room.tenant,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                          Text(
-                            '\$${e.value.amount.toStringAsFixed(0)}/mo',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color),
-                          ),
-                          Text(
-                            '${(e.value.percentage * 100).toStringAsFixed(0)}%',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-                          ),
-                        ]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '\$${e.value.amount.toStringAsFixed(0)}',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color),
+                        ),
                       ]),
                     );
                   }).toList(),

@@ -366,20 +366,49 @@ class _SavedTabState extends State<_SavedTab> {
 
     return Scaffold(
       backgroundColor: AppColors.surfaceVariant,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        title: const Text('Saved Splits', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Text('Auto-saved on calculate', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary, fontSize: 11)),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar(
+            expandedHeight: 200,
+            floating: false,
+            pinned: true,
+            backgroundColor: AppColors.surface,
+            title: const Text('Saved Splits', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text('Auto-saved', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary, fontSize: 11)),
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    'assets/images/hero_save_configs.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: AppColors.primaryLight),
+                  ),
+                  // Bottom fade into background
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, AppColors.surfaceVariant],
+                        stops: [0.6, 1.0],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
-      ),
-      body: ChangeNotifierProvider.value(
-        value: widget.state,
-        child: _SavedResultsBody(onLoaded: widget.onLoaded),
+        body: ChangeNotifierProvider.value(
+          value: widget.state,
+          child: _SavedResultsBody(onLoaded: widget.onLoaded),
+        ),
       ),
     );
   }
@@ -597,8 +626,9 @@ class _SavedResultsBody extends StatelessWidget {
                   onPressed: () => _load(context, state, r.id, r.address),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                  color: AppColors.textTertiary,
+                  icon: const Icon(Icons.delete_rounded, size: 22),
+                  color: AppColors.error,
+                  tooltip: 'Delete',
                   onPressed: () => _delete(context, state, r.id, r.address),
                 ),
               ]),
@@ -654,6 +684,18 @@ class _SettingsTab extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          // Hero image
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              'assets/images/hero_chad_split.jpg',
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
+          const SizedBox(height: 20),
           // About card
           _SettingsSection(
             title: 'About',
@@ -1021,11 +1063,13 @@ class _SwipeDeleteWrapperState extends State<_SwipeDeleteWrapper>
         curve: Curves.easeIn,
       ).then((_) => widget.onDelete());
     } else {
+      // Clamp velocity to prevent overshoot/double-bounce on snap-back
+      final clampedVelocity = d.velocity.pixelsPerSecond.dx.clamp(-500.0, 500.0);
       final sim = SpringSimulation(
-        const SpringDescription(mass: 1, stiffness: 380, damping: 32),
+        const SpringDescription(mass: 1, stiffness: 600, damping: 38),
         _offsetX,
         0.0,
-        d.velocity.pixelsPerSecond.dx,
+        clampedVelocity,
       );
       _anim.animateWith(sim);
     }

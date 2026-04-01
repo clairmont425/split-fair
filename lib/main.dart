@@ -83,21 +83,29 @@ class _Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<_Splash> {
+  bool _precached = false;
+
   @override
-  void initState() {
-    super.initState();
-    _navigate();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_precached) {
+      _precached = true;
+      _precacheAndNavigate();
+    }
   }
-  Future<void> _navigate() async {
-    // Run splash delay and first-launch check in parallel.
+
+  Future<void> _precacheAndNavigate() async {
+    // Precache splash images, onboarding check, and minimum delay in parallel.
     final results = await Future.wait([
+      precacheImage(const AssetImage(AppImages.splashBg), context).catchError((_) {}),
+      precacheImage(const AssetImage(AppImages.splashLogo), context).catchError((_) {}),
       Future.delayed(const Duration(milliseconds: 600)),
       hasSeenOnboarding(),
     ]);
     if (!mounted) return;
     // Kick off IAP initialisation in the background — doesn't block navigation.
     context.read<AppState>().initIap();
-    final seenOnboarding = false; // TEMP: force onboarding for testing
+    final seenOnboarding = false; // TEMP: force onboarding for testing — restore: results[3] as bool
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) =>

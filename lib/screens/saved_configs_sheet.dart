@@ -78,7 +78,7 @@ class _SavedConfigsSheetState extends State<SavedConfigsSheet> {
         const SizedBox(height: 12),
         ...[
           'Save for different apartments you\'re considering',
-          'Compare "Room A gets master" vs "Room B gets master"',
+          'Reload in seconds when roommates change',
           'Load any setup in one tap',
           'Download a shareable PDF of your split',
         ].map((f) => Padding(padding: const EdgeInsets.only(bottom: 6),
