@@ -69,6 +69,10 @@ class _SplashLogo extends StatelessWidget {
           width: 120,
           height: 120,
           fit: BoxFit.cover,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) return child;
+            return const Icon(Icons.home_work_rounded, size: 52, color: AppColors.primary);
+          },
           errorBuilder: (_, __, ___) => const Icon(Icons.home_work_rounded, size: 52, color: AppColors.primary),
         ),
       ),
@@ -114,7 +118,7 @@ class _SplashState extends State<_Splash> {
     ]);
     if (!mounted) return;
     context.read<AppState>().initIap();
-    final seenOnboarding = false; // TEMP: force onboarding for testing — restore: results.last as bool
+    final seenOnboarding = results.last as bool;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) =>

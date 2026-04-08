@@ -462,6 +462,11 @@ class _StitchSlideState extends State<_StitchSlide> {
             widget.data.heroImage,
             fit: BoxFit.cover,
             alignment: Alignment.topCenter,
+            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+              if (wasSynchronouslyLoaded || frame != null) return child;
+              return Container(color: const Color(0xFFF5F0EB));
+            },
+            errorBuilder: (_, __, ___) => Container(color: const Color(0xFFF5F0EB)),
           ),
         ),
 
