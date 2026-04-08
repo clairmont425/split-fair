@@ -89,7 +89,6 @@ class _Splash extends StatefulWidget {
 
 class _SplashState extends State<_Splash> {
   bool _started = false;
-  bool _splashReady = false; // true once splash images are decoded
 
   @override
   void didChangeDependencies() {
@@ -101,31 +100,13 @@ class _SplashState extends State<_Splash> {
   }
 
   Future<void> _precacheAndNavigate() async {
-    // Phase 1: Decode splash images so the splash screen itself never shows
-    // a checkerboard. Uses exact AssetImage instances matching the Image widgets.
-    // Also resolve() them to force full decode into the image cache.
-    const bgImage = AssetImage(AppImages.splashBg);
-    const logoImage = AssetImage(AppImages.splashLogo);
-    await Future.wait([
-      precacheImage(bgImage, context).catchError((_) {}),
-      precacheImage(logoImage, context).catchError((_) {}),
-    ]);
-    // Double-check: resolve to ensure the codec is fully warmed
-    if (mounted) {
-      bgImage.resolve(createLocalImageConfiguration(context));
-      logoImage.resolve(createLocalImageConfiguration(context));
-    }
-    if (!mounted) return;
-    // Small delay to let the image cache settle on cold installs
-    await Future.delayed(const Duration(milliseconds: 50));
-    if (!mounted) return;
-    setState(() => _splashReady = true);
-
-    // Phase 2: Precache onboarding heroes + minimum display time in parallel.
+    // Precache logo + onboarding heroes + minimum display time in parallel.
+    // The splash background is a pure gradient (no image) so it renders instantly.
     final results = await Future.wait([
+      precacheImage(const AssetImage(AppImages.splashLogo), context).catchError((_) {}),
       for (final hero in AppImages.onboardingHeroes)
         precacheImage(AssetImage(hero), context).catchError((_) {}),
-      Future.delayed(const Duration(milliseconds: 600)),
+      Future.delayed(const Duration(milliseconds: 800)),
       hasSeenOnboarding(),
     ]);
     if (!mounted) return;
@@ -144,25 +125,19 @@ class _SplashState extends State<_Splash> {
 
   @override
   Widget build(BuildContext context) {
-    // Solid colour until splash images are decoded — no checkerboard possible.
-    if (!_splashReady) {
-      return const Scaffold(backgroundColor: AppColors.primaryLight);
-    }
+    // Pure gradient background — no image loading, renders on first frame.
     return Scaffold(
-      backgroundColor: AppColors.primaryLight,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image(
-            image: const AssetImage(AppImages.splashBg),
-            fit: BoxFit.cover,
-            gaplessPlayback: true,
-            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-              if (wasSynchronouslyLoaded || frame != null) return child;
-              return ColoredBox(color: AppColors.primaryLight);
-            },
-            errorBuilder: (_, __, ___) => const ColoredBox(color: AppColors.primaryLight),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.primaryLight, Colors.white],
           ),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -189,7 +164,8 @@ class _SplashState extends State<_Splash> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
