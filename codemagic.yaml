@@ -30,7 +30,7 @@ workflows:
             BUILD_NUM=$(date +%s | tail -c 6)
           fi
           CURRENT_VER=$(grep 'version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
-          sed -i "s/version: .*/version: ${CURRENT_VER}+${BUILD_NUM}/" pubspec.yaml
+          sed -i '' "s/version: .*/version: ${CURRENT_VER}+${BUILD_NUM}/" pubspec.yaml
           echo "Building version: ${CURRENT_VER}+${BUILD_NUM}"
       - name: Initialize keychain
         script: keychain initialize
@@ -96,7 +96,7 @@ workflows:
           # Use epoch-based build number to guarantee uniqueness
           BUILD_NUM=$(date +%s | tail -c 6)
           CURRENT_VER=$(grep 'version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
-          sed -i "s/version: .*/version: ${CURRENT_VER}+${BUILD_NUM}/" pubspec.yaml
+          sed -i '' "s/version: .*/version: ${CURRENT_VER}+${BUILD_NUM}/" pubspec.yaml
           echo "Building version: ${CURRENT_VER}+${BUILD_NUM}"
       - name: Get Flutter packages
         script: flutter packages pub get
