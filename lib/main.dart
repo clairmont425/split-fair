@@ -89,43 +89,54 @@ class _Splash extends StatefulWidget {
 
 class _SplashState extends State<_Splash> {
   bool _started = false;
+  bool _resolved = false;
+  bool _seenOnboarding = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_started) {
       _started = true;
-      _precacheAndNavigate();
+      _resolveAndNavigate();
     }
   }
 
-  Future<void> _precacheAndNavigate() async {
-    // Precache logo + onboarding heroes + minimum display time in parallel.
-    // The splash background is a pure gradient (no image) so it renders instantly.
-    final results = await Future.wait([
-      precacheImage(const AssetImage(AppImages.splashLogo), context).catchError((_) {}),
-      for (final hero in AppImages.onboardingHeroes)
-        precacheImage(AssetImage(hero), context).catchError((_) {}),
-      Future.delayed(const Duration(milliseconds: 800)),
-      hasSeenOnboarding(),
-    ]);
+  Future<void> _resolveAndNavigate() async {
+    // No visual splash — the iOS LaunchScreen (solid brand green) covers
+    // load time. We just precache heroes in the background and immediately
+    // show the target screen once the first frame is ready.
+    final seen = await hasSeenOnboarding();
+    // Precache onboarding hero images in parallel (fire-and-forget; if they
+    // aren't cached yet the onboarding will show them once loaded anyway).
+    for (final hero in AppImages.onboardingHeroes) {
+      precacheImage(AssetImage(hero), context).catchError((_) {});
+    }
     if (!mounted) return;
     context.read<AppState>().initIap();
-    final seenOnboarding = results.last as bool;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) =>
-            seenOnboarding ? const HomeScreen() : const OnboardingScreen(),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
+    setState(() {
+      _seenOnboarding = seen;
+      _resolved = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Pure gradient background — no image loading, renders on first frame.
+    // While resolving, show solid brand green (matches iOS LaunchScreen
+    // so the transition is invisible — no flash, no checkerboard, no logo).
+    if (!_resolved) {
+      return const Scaffold(
+        backgroundColor: AppColors.primary,  // #00694C
+        body: SizedBox.expand(),
+      );
+    }
+    // Once resolved, immediately show onboarding or home — no fade delay.
+    return _seenOnboarding ? const HomeScreen() : const OnboardingScreen();
+  }
+
+  // ── DEAD CODE BELOW — kept only so _SplashLogo class still compiles ──
+  // (It's referenced by the class definition above but never rendered.)
+  // TODO: remove _SplashLogo class entirely in a future cleanup pass.
+  Widget _legacySplashBuild(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
