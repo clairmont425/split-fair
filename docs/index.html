@@ -204,30 +204,56 @@
       letter-spacing: 0.05em;
     }
 
-    /* ── PHONE MOCKUP ────────────────────────── */
-    .phone-frame {
+    /* ── APP SCREENS GALLERY ────────────────── */
+    .screens-gallery {
       margin-top: 48px;
       z-index: 1;
-      width: 280px;
-      height: 560px;
-      background: var(--surface);
-      border-radius: 40px;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.25), inset 0 0 0 3px rgba(255,255,255,0.1);
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 900px;
+    }
+    .screen-card {
+      flex: 0 0 auto;
+      width: 190px;
+      border-radius: 24px;
       overflow: hidden;
-      position: relative;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+      background: var(--surface);
+      transition: transform 0.3s ease;
     }
-    .phone-frame img {
+    .screen-card:hover {
+      transform: translateY(-8px);
+    }
+    .screen-card img {
       width: 100%;
-      height: 100%;
-      object-fit: cover;
+      height: auto;
+      display: block;
     }
-    .phone-notch {
-      position: absolute;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
-      width: 120px; height: 28px;
-      background: #000;
-      border-radius: 0 0 18px 18px;
+    .screen-label {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+      padding: 8px 0 0;
+      letter-spacing: 0.5px;
+    }
+    @media (max-width: 768px) {
+      .screens-gallery {
+        gap: 10px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 16px 16px;
+        max-width: 100vw;
+      }
+      .screen-card {
+        width: 150px;
+        flex-shrink: 0;
+      }
+    }
+    @media (max-width: 480px) {
+      .screen-card { width: 130px; }
     }
 
     /* ── FEATURES SECTION ────────────────────── */
@@ -466,14 +492,14 @@
       from { opacity: 0; transform: translateY(24px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .hero h1, .hero p, .hero-badge, .cta-group, .phone-frame {
+    .hero h1, .hero p, .hero-badge, .cta-group, .screens-gallery {
       animation: fadeUp 0.7s ease-out both;
     }
     .hero-badge { animation-delay: 0s; }
     .hero h1 { animation-delay: 0.1s; }
     .hero p { animation-delay: 0.2s; }
     .cta-group { animation-delay: 0.3s; }
-    .phone-frame { animation-delay: 0.5s; }
+    .screens-gallery { animation-delay: 0.5s; }
   </style>
 </head>
 <body>
@@ -506,9 +532,31 @@
       </div>
       <a href="#how-it-works" class="cta-secondary">See how it works ↓</a>
     </div>
-    <div class="phone-frame">
-      <div class="phone-notch"></div>
-      <img src="phone-mockup.png" alt="Split Fair results screen showing fair rent splits for each roommate" />
+    <div class="screens-gallery">
+      <div>
+        <div class="screen-card">
+          <img src="screen-welcome.jpg" alt="Split Fair welcome screen" />
+        </div>
+        <div class="screen-label">Welcome</div>
+      </div>
+      <div>
+        <div class="screen-card">
+          <img src="screen-home.png" alt="Split Fair home — enter rent and rooms" />
+        </div>
+        <div class="screen-label">Set Up</div>
+      </div>
+      <div>
+        <div class="screen-card">
+          <img src="screen-rooms.png" alt="Split Fair room editor — score room features" />
+        </div>
+        <div class="screen-label">Score Rooms</div>
+      </div>
+      <div>
+        <div class="screen-card">
+          <img src="screen-results.png" alt="Split Fair results — fair rent for every room" />
+        </div>
+        <div class="screen-label">Fair Split</div>
+      </div>
     </div>
   </section>
 
