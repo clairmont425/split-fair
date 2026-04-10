@@ -89,8 +89,6 @@ class _Splash extends StatefulWidget {
 
 class _SplashState extends State<_Splash> {
   bool _started = false;
-  bool _resolved = false;
-  bool _seenOnboarding = false;
 
   @override
   void didChangeDependencies() {
@@ -103,34 +101,33 @@ class _SplashState extends State<_Splash> {
 
   Future<void> _resolveAndNavigate() async {
     // No visual splash — the iOS LaunchScreen (solid brand green) covers
-    // load time. We just precache heroes in the background and immediately
-    // show the target screen once the first frame is ready.
+    // load time. Precache heroes in background, then navigate immediately.
     final seen = await hasSeenOnboarding();
-    // Precache onboarding hero images in parallel (fire-and-forget; if they
-    // aren't cached yet the onboarding will show them once loaded anyway).
     for (final hero in AppImages.onboardingHeroes) {
       precacheImage(AssetImage(hero), context).catchError((_) {});
     }
     if (!mounted) return;
     context.read<AppState>().initIap();
-    setState(() {
-      _seenOnboarding = seen;
-      _resolved = true;
-    });
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) =>
+            seen ? const HomeScreen() : const OnboardingScreen(),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // While resolving, show solid brand green (matches iOS LaunchScreen
-    // so the transition is invisible — no flash, no checkerboard, no logo).
-    if (!_resolved) {
-      return const Scaffold(
-        backgroundColor: AppColors.primary,  // #00694C
-        body: SizedBox.expand(),
-      );
-    }
-    // Once resolved, immediately show onboarding or home — no fade delay.
-    return _seenOnboarding ? const HomeScreen() : const OnboardingScreen();
+    // Solid brand green — matches iOS LaunchScreen exactly.
+    // No logo, no gradient, no animation. Just green until the
+    // onboarding/home route fades in via pushReplacement above.
+    return const Scaffold(
+      backgroundColor: AppColors.primary,
+      body: SizedBox.expand(),
+    );
   }
 
   // ── DEAD CODE BELOW — kept only so _SplashLogo class still compiles ──
