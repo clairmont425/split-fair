@@ -805,30 +805,41 @@
   </footer>
 
   <script>
+    var WAITLIST_API = 'https://script.google.com/macros/s/AKfycbxFUb5j9JxvCQCZAHaie_yzLbT9fPTiR_YPd6Tpld64xHVxnyRAlKRFeQ-MaaouxwkC/exec';
+
     function handleWaitlist(e) {
       e.preventDefault();
       var email = document.getElementById('waitlist-email').value;
-      // Store in localStorage as simple waitlist (upgrade to backend later)
-      var waitlist = JSON.parse(localStorage.getItem('splitfair_waitlist') || '[]');
-      if (waitlist.indexOf(email) === -1) {
-        waitlist.push(email);
-        localStorage.setItem('splitfair_waitlist', JSON.stringify(waitlist));
-      }
-      document.getElementById('waitlist-form').style.display = 'none';
-      document.getElementById('waitlist-success').style.display = 'block';
-      // Update count display
-      var countEl = document.querySelector('.waitlist-count');
-      if (countEl) countEl.textContent = waitlist.length + '+ people waiting for fair rent';
+      var btn = document.querySelector('.waitlist-form button');
+      btn.textContent = 'Joining...';
+      btn.disabled = true;
+      fetch(WAITLIST_API, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: email, source: 'website'})
+      }).then(function() {
+        document.getElementById('waitlist-form').style.display = 'none';
+        document.getElementById('waitlist-success').style.display = 'block';
+        loadWaitlistCount();
+      }).catch(function() {
+        document.getElementById('waitlist-form').style.display = 'none';
+        document.getElementById('waitlist-success').style.display = 'block';
+      });
       return false;
     }
-    // Show count on load
-    (function() {
-      var waitlist = JSON.parse(localStorage.getItem('splitfair_waitlist') || '[]');
-      var countEl = document.querySelector('.waitlist-count');
-      if (countEl && waitlist.length > 0) {
-        countEl.textContent = waitlist.length + '+ people waiting for fair rent';
-      }
-    })();
+
+    function loadWaitlistCount() {
+      fetch(WAITLIST_API)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var countEl = document.querySelector('.waitlist-count');
+          if (countEl && data.count > 0) {
+            countEl.textContent = data.count + '+ people waiting for fair rent';
+          }
+        }).catch(function() {});
+    }
+    loadWaitlistCount();
   </script>
 
 </body>
