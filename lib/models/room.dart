@@ -1,5 +1,30 @@
 import 'dart:convert';
 
+class CustomFeature {
+  final String id;
+  String name;
+  int points; // 10-40
+  bool enabled;
+
+  CustomFeature({required this.id, required this.name, this.points = 20, this.enabled = true});
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'points': points, 'enabled': enabled};
+
+  factory CustomFeature.fromJson(Map<String, dynamic> json) => CustomFeature(
+    id: json['id'],
+    name: json['name'],
+    points: (json['points'] as num?)?.toInt() ?? 20,
+    enabled: json['enabled'] ?? true,
+  );
+
+  CustomFeature copyWith({String? name, int? points, bool? enabled}) => CustomFeature(
+    id: id,
+    name: name ?? this.name,
+    points: points ?? this.points,
+    enabled: enabled ?? this.enabled,
+  );
+}
+
 class Room {
   final String id;
   String name;
@@ -15,6 +40,7 @@ class Room {
   double storageScore;
   int floorLevel; // 0 = ground/unknown, positive = floor number
   double? communalSharePct; // null = use equal share
+  List<CustomFeature> customFeatures;
 
   Room({
     required this.id, required this.name, required this.tenant,
@@ -22,12 +48,13 @@ class Room {
     this.hasWalkInCloset = false, this.hasParking = false, this.hasAC = false,
     this.naturalLightScore = 5, this.noiseScore = 5, this.storageScore = 5,
     this.floorLevel = 0, this.communalSharePct,
-  });
+    List<CustomFeature>? customFeatures,
+  }) : customFeatures = customFeatures ?? [];
 
   Room copyWith({String? name, String? tenant, double? sqft, bool? hasPrivateBath,
     bool? hasBalcony, bool? hasWalkInCloset, bool? hasParking, bool? hasAC,
     double? naturalLightScore, double? noiseScore, double? storageScore, int? floorLevel,
-    double? communalSharePct}) {
+    double? communalSharePct, List<CustomFeature>? customFeatures}) {
     return Room(
       id: id, name: name ?? this.name, tenant: tenant ?? this.tenant,
       sqft: sqft ?? this.sqft, hasPrivateBath: hasPrivateBath ?? this.hasPrivateBath,
@@ -37,6 +64,7 @@ class Room {
       noiseScore: noiseScore ?? this.noiseScore, storageScore: storageScore ?? this.storageScore,
       floorLevel: floorLevel ?? this.floorLevel,
       communalSharePct: communalSharePct,
+      customFeatures: customFeatures ?? this.customFeatures.map((f) => f.copyWith()).toList(),
     );
   }
 
@@ -50,6 +78,9 @@ class Room {
     if (hasWalkInCloset) score += 15;
     if (hasParking) score += 30;
     if (hasAC) score += 10;
+    for (final f in customFeatures) {
+      if (f.enabled) score += f.points;
+    }
     // Higher floors get a small bonus (view, privacy)
     if (floorLevel > 0) score += (floorLevel * 2).clamp(0, 12).toDouble();
     score += naturalLightScore * 3;
@@ -65,6 +96,7 @@ class Room {
     'naturalLightScore': naturalLightScore,
     'noiseScore': noiseScore, 'storageScore': storageScore, 'floorLevel': floorLevel,
     'communalSharePct': communalSharePct,
+    'customFeatures': customFeatures.map((f) => f.toJson()).toList(),
   };
 
   factory Room.fromJson(Map<String, dynamic> json) => Room(
@@ -80,6 +112,9 @@ class Room {
     storageScore: (json['storageScore'] as num).toDouble(),
     floorLevel: (json['floorLevel'] as num?)?.toInt() ?? 0,
     communalSharePct: (json['communalSharePct'] as num?)?.toDouble(),
+    customFeatures: (json['customFeatures'] as List?)
+        ?.map((e) => CustomFeature.fromJson(e))
+        .toList(),
   );
 
   static String encodeList(List<Room> rooms) =>

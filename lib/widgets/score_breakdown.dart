@@ -84,6 +84,9 @@ class _ScoreBreakdownState extends State<ScoreBreakdown> {
     if (room.hasBalcony) items.add(('Balcony / patio', 20));
     if (room.hasWalkInCloset) items.add(('Walk-in closet', 15));
     if (room.hasAC) items.add(('A/C unit', 10));
+    for (final f in room.customFeatures) {
+      if (f.enabled) items.add((f.name, f.points.toDouble()));
+    }
     if (room.floorLevel > 0) {
       final bonus = (room.floorLevel * 2).clamp(0, 12).toDouble();
       items.add(('Floor ${room.floorLevel} bonus', bonus));

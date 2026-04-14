@@ -117,6 +117,131 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
     );
   }
 
+  void _showAddCustomFeatureDialog() {
+    final nameCtrl = TextEditingController();
+    int points = 20;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 20, 24, 20 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Add custom feature', style: Theme.of(ctx).textTheme.titleMedium),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: nameCtrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Feature name', hintText: 'e.g. Bay window'),
+            ),
+            const SizedBox(height: 20),
+            Row(children: [
+              Text('Point value', style: Theme.of(ctx).textTheme.bodyMedium),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
+                child: Text('+$points pts', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryDark)),
+              ),
+            ]),
+            Slider(
+              value: points.toDouble(),
+              min: 10, max: 40, divisions: 6,
+              onChanged: (v) => setSheetState(() => points = v.toInt()),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity, height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  final name = nameCtrl.text.trim();
+                  if (name.isEmpty) return;
+                  setState(() {
+                    _room.customFeatures.add(CustomFeature(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      name: name,
+                      points: points,
+                    ));
+                  });
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Add'),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  void _showEditCustomFeatureDialog(CustomFeature feature) {
+    int points = feature.points;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Edit "${feature.name}"', style: Theme.of(ctx).textTheme.titleMedium),
+            const SizedBox(height: 20),
+            Row(children: [
+              Text('Point value', style: Theme.of(ctx).textTheme.bodyMedium),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
+                child: Text('+$points pts', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryDark)),
+              ),
+            ]),
+            Slider(
+              value: points.toDouble(),
+              min: 10, max: 40, divisions: 6,
+              onChanged: (v) => setSheetState(() => points = v.toInt()),
+            ),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() => _room.customFeatures.removeWhere((f) => f.id == feature.id));
+                    Navigator.pop(ctx);
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Delete'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() => feature.points = points);
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                  child: const Text('Save'),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
   void _save() {
     final parsedSqft = double.tryParse(_sqftCtrl.text) ?? _room.sqft;
     if (parsedSqft < 50) {
@@ -255,6 +380,19 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
                 FeatureChip(label: 'Balcony / patio', icon: Icons.deck_rounded, selected: _room.hasBalcony, bonus: '+20 pts', onTap: () => setState(() { _room = _room.copyWith(hasBalcony: !_room.hasBalcony); })),
                 FeatureChip(label: 'Walk-in closet', icon: Icons.checkroom_rounded, selected: _room.hasWalkInCloset, bonus: '+15 pts', onTap: () => setState(() { _room = _room.copyWith(hasWalkInCloset: !_room.hasWalkInCloset); })),
                 FeatureChip(label: 'A/C unit', icon: Icons.ac_unit_rounded, selected: _room.hasAC, bonus: '+10 pts', onTap: () => setState(() { _room = _room.copyWith(hasAC: !_room.hasAC); })),
+                // Custom features
+                ..._room.customFeatures.map((f) => GestureDetector(
+                  onLongPress: () => _showEditCustomFeatureDialog(f),
+                  child: FeatureChip(
+                    label: f.name,
+                    icon: Icons.star_rounded,
+                    selected: f.enabled,
+                    bonus: '+${f.points} pts',
+                    onTap: () => setState(() { f.enabled = !f.enabled; }),
+                  ),
+                )),
+                // Add feature button
+                _AddFeatureChip(onTap: _showAddCustomFeatureDialog),
               ]),
               const SizedBox(height: 24),
               const SectionHeader(label: 'Room quality'),
@@ -453,4 +591,58 @@ class _RoomEditSheetState extends State<RoomEditSheet> {
     ),
     );
   }
+}
+
+class _AddFeatureChip extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddFeatureChip({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(color: AppColors.textTertiary.withOpacity(0.5), radius: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.add_rounded, size: 16, color: AppColors.textTertiary),
+            const SizedBox(width: 6),
+            Text('Add feature', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textTertiary)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  const _DashedBorderPainter({required this.color, required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    final path = Path()..addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height), Radius.circular(radius)));
+    final dashPath = Path();
+    const dashLen = 5.0;
+    const gapLen = 4.0;
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final end = (distance + dashLen).clamp(0.0, metric.length);
+        dashPath.addPath(metric.extractPath(distance, end), Offset.zero);
+        distance += dashLen + gapLen;
+      }
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
 }
