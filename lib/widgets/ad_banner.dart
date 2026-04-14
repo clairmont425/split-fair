@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import '../models/ad_service.dart';
-import '../models/app_state.dart';
+import '../models/app_state.dart' as app;
 
 /// Shows a banner ad at the bottom of the screen.
 /// Automatically hides when the user has purchased any premium feature.
@@ -43,7 +43,7 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
+    final state = context.watch<app.AppState>();
     // Hide ads once any premium feature is purchased
     if (state.iapUnlocked || state.iapConfigsUnlocked) return const SizedBox.shrink();
     if (!_loaded || _ad == null) return const SizedBox.shrink();
