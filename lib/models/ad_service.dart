@@ -4,15 +4,11 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 class AdService {
   static bool _initialized = false;
 
-  // ── Test IDs (replace with real IDs before release) ───────────────────────
-  // Real IDs come from AdMob console: admob.google.com
   static String get bannerAdUnitId {
     if (Platform.isIOS) {
-      // TODO: replace with real iOS banner unit ID from AdMob
-      return 'ca-app-pub-3940256099942544/2934735716'; // test
+      return 'ca-app-pub-1238536439375279/3739766193';
     }
-    // TODO: replace with real Android banner unit ID from AdMob
-    return 'ca-app-pub-3940256099942544/6300978111'; // test
+    return 'ca-app-pub-1238536439375279/1085894726';
   }
 
   static Future<void> initialize() async {
