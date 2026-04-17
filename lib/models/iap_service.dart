@@ -4,32 +4,32 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 // ─── Product IDs ─────────────────────────────────────────────────────────────
 // These must match EXACTLY what you create in App Store Connect & Google Play.
-const kProductPdfExport = 'split_fair_pdf_export';     // $1.99 one-time
+const kProductPdfExport = 'split_fair_pdf_export';     // $1.99 — skip video ad for PDF
+const kProductRemoveAds = 'split_fair_remove_ads';     // $3.99 — remove ALL ads
 const kProductSavedConfigs = 'split_fair_saved_configs'; // $1.99 one-time
 
 /// Manages all in-app purchase logic for Split Fair.
 ///
-/// Usage:
-///   final iap = IapService();
-///   await iap.init();
-///   iap.purchasePdfExport();
-///   iap.purchaseSavedConfigs();
-///   iap.dispose();
+/// Tier 1: PDF Export ($1.99) — removes rewarded video gate, banners stay
+/// Tier 2: Remove All Ads ($3.99) — no banners, no video gate, includes PDF
 class IapService extends ChangeNotifier {
   final InAppPurchase _iap = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _sub;
 
   bool _storeAvailable = false;
   bool _pdfUnlocked = false;
+  bool _removeAdsUnlocked = false;
   bool _configsUnlocked = false;
   bool _loading = false;
   String? _errorMessage;
 
   ProductDetails? _pdfProduct;
+  ProductDetails? _removeAdsProduct;
   ProductDetails? _configsProduct;
 
   bool get storeAvailable => _storeAvailable;
-  bool get pdfUnlocked => _pdfUnlocked;
+  bool get pdfUnlocked => _pdfUnlocked || _removeAdsUnlocked;
+  bool get removeAdsUnlocked => _removeAdsUnlocked;
   bool get configsUnlocked => _configsUnlocked;
   bool get loading => _loading;
   String? get errorMessage => _errorMessage;
@@ -37,11 +37,14 @@ class IapService extends ChangeNotifier {
   /// Call once from AppState or main(). Connects to the store and loads products.
   Future<void> init({
     required bool pdfAlreadyUnlocked,
+    required bool removeAdsAlreadyUnlocked,
     required bool configsAlreadyUnlocked,
     required Future<void> Function() onPdfPurchased,
+    required Future<void> Function() onRemoveAdsPurchased,
     required Future<void> Function() onConfigsPurchased,
   }) async {
     _pdfUnlocked = pdfAlreadyUnlocked;
+    _removeAdsUnlocked = removeAdsAlreadyUnlocked;
     _configsUnlocked = configsAlreadyUnlocked;
 
     _storeAvailable = await _iap.isAvailable();
@@ -49,7 +52,7 @@ class IapService extends ChangeNotifier {
 
     // Listen for purchase updates
     _sub = _iap.purchaseStream.listen(
-      (purchases) => _handlePurchases(purchases, onPdfPurchased, onConfigsPurchased),
+      (purchases) => _handlePurchases(purchases, onPdfPurchased, onRemoveAdsPurchased, onConfigsPurchased),
       onError: (e) {
         _errorMessage = e.toString();
         notifyListeners();
@@ -57,7 +60,7 @@ class IapService extends ChangeNotifier {
     );
 
     // Load product details
-    final response = await _iap.queryProductDetails({kProductPdfExport, kProductSavedConfigs});
+    final response = await _iap.queryProductDetails({kProductPdfExport, kProductRemoveAds, kProductSavedConfigs});
     if (response.error != null) {
       _errorMessage = response.error!.message;
       notifyListeners();
@@ -65,13 +68,17 @@ class IapService extends ChangeNotifier {
     }
     for (final p in response.productDetails) {
       if (p.id == kProductPdfExport) _pdfProduct = p;
+      if (p.id == kProductRemoveAds) _removeAdsProduct = p;
       if (p.id == kProductSavedConfigs) _configsProduct = p;
     }
     notifyListeners();
   }
 
-  /// Trigger a purchase for the PDF export feature.
+  /// Trigger a purchase for the PDF export feature (Tier 1).
   void purchasePdfExport() => _buy(_pdfProduct);
+
+  /// Trigger a purchase for removing all ads (Tier 2).
+  void purchaseRemoveAds() => _buy(_removeAdsProduct);
 
   /// Trigger a purchase for the Saved Configs feature.
   void purchaseSavedConfigs() => _buy(_configsProduct);
@@ -98,6 +105,7 @@ class IapService extends ChangeNotifier {
   Future<void> _handlePurchases(
     List<PurchaseDetails> purchases,
     Future<void> Function() onPdfPurchased,
+    Future<void> Function() onRemoveAdsPurchased,
     Future<void> Function() onConfigsPurchased,
   ) async {
     for (final p in purchases) {
@@ -111,6 +119,11 @@ class IapService extends ChangeNotifier {
           if (p.productID == kProductPdfExport && !_pdfUnlocked) {
             _pdfUnlocked = true;
             await onPdfPurchased();
+          }
+          if (p.productID == kProductRemoveAds && !_removeAdsUnlocked) {
+            _removeAdsUnlocked = true;
+            _pdfUnlocked = true; // Tier 2 includes Tier 1
+            await onRemoveAdsPurchased();
           }
           if (p.productID == kProductSavedConfigs && !_configsUnlocked) {
             _configsUnlocked = true;

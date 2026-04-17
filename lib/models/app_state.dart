@@ -12,6 +12,7 @@ const _kDebugUnlockAll = false;
 const _kRoomsKey = 'saved_rooms';
 const _kRentKey = 'saved_rent';
 const _kIapKey = 'iap_unlocked';
+const _kIapRemoveAdsKey = 'iap_remove_ads_unlocked';
 const _kIapConfigsKey = 'iap_configs_unlocked';
 const _kAddressKey = 'saved_address';
 const _kConfigsKey = 'saved_configs';
@@ -108,6 +109,7 @@ class AppState extends ChangeNotifier {
   List<Room> _rooms = [];
   double _totalRent = 2500;
   bool _iapUnlocked = false;
+  bool _iapRemoveAdsUnlocked = false;
   bool _iapConfigsUnlocked = false;
   bool _loaded = false;
   String _address = '';
@@ -119,6 +121,7 @@ class AppState extends ChangeNotifier {
   List<Room> get rooms => _rooms;
   double get totalRent => _totalRent;
   bool get iapUnlocked => _kDebugUnlockAll || _iapUnlocked;
+  bool get iapRemoveAdsUnlocked => _kDebugUnlockAll || _iapRemoveAdsUnlocked;
   bool get iapConfigsUnlocked => _kDebugUnlockAll || _iapConfigsUnlocked;
   bool get loaded => _loaded;
   String get address => _address;
@@ -162,8 +165,10 @@ class AppState extends ChangeNotifier {
   /// Call after [_loadFromPrefs] completes to connect the real IAP store.
   Future<void> initIap() => iapService.init(
     pdfAlreadyUnlocked: _iapUnlocked,
+    removeAdsAlreadyUnlocked: _iapRemoveAdsUnlocked,
     configsAlreadyUnlocked: _iapConfigsUnlocked,
     onPdfPurchased: unlockIap,
+    onRemoveAdsPurchased: unlockRemoveAdsIap,
     onConfigsPurchased: unlockConfigsIap,
   );
 
@@ -180,6 +185,7 @@ class AppState extends ChangeNotifier {
     }
     _totalRent = prefs.getDouble(_kRentKey) ?? 2500;
     _iapUnlocked = prefs.getBool(_kIapKey) ?? false;
+    _iapRemoveAdsUnlocked = prefs.getBool(_kIapRemoveAdsKey) ?? false;
     _iapConfigsUnlocked = prefs.getBool(_kIapConfigsKey) ?? false;
     _address = prefs.getString(_kAddressKey) ?? '';
     _totalAptSqft = prefs.getDouble(_kTotalAptSqftKey) ?? 0;
@@ -263,6 +269,15 @@ class AppState extends ChangeNotifier {
   Future<void> unlockIap() async {
     _iapUnlocked = true;
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kIapKey, true);
+    notifyListeners();
+  }
+
+  Future<void> unlockRemoveAdsIap() async {
+    _iapRemoveAdsUnlocked = true;
+    _iapUnlocked = true; // Tier 2 includes Tier 1
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kIapRemoveAdsKey, true);
     await prefs.setBool(_kIapKey, true);
     notifyListeners();
   }

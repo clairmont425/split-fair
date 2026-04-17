@@ -44,15 +44,32 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<app.AppState>();
-    // Hide ads once any premium feature is purchased
-    if (state.iapUnlocked || state.iapConfigsUnlocked) return const SizedBox.shrink();
+    // Hide banner only when "Remove All Ads" (Tier 2) is purchased
+    if (state.iapRemoveAdsUnlocked) return const SizedBox.shrink();
     if (!_loaded || _ad == null) return const SizedBox.shrink();
 
     return SafeArea(
-      child: SizedBox(
-        width: _ad!.size.width.toDouble(),
-        height: _ad!.size.height.toDouble(),
-        child: AdWidget(ad: _ad!),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: _ad!.size.width.toDouble(),
+            height: _ad!.size.height.toDouble(),
+            child: AdWidget(ad: _ad!),
+          ),
+          GestureDetector(
+            onTap: () {
+              state.iapService.purchaseRemoveAds();
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 2),
+              child: Text(
+                'Remove ads \$3.99',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

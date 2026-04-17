@@ -36,7 +36,15 @@ class _PaywallSheetState extends State<PaywallSheet> {
     );
   }
 
-  void _purchase() {
+  void _purchasePdf() {
+    _doPurchase(() => context.read<AppState>().iapService.purchasePdfExport());
+  }
+
+  void _purchaseRemoveAds() {
+    _doPurchase(() => context.read<AppState>().iapService.purchaseRemoveAds());
+  }
+
+  void _doPurchase(VoidCallback buy) {
     final iap = context.read<AppState>().iapService;
     if (!iap.storeAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -44,7 +52,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
       );
       return;
     }
-    iap.purchasePdfExport();
+    buy();
     if (iap.errorMessage == null) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,15 +168,28 @@ class _PaywallSheetState extends State<PaywallSheet> {
         ),
         const SizedBox(height: 12),
 
-        // ── Option 2: Purchase to skip ads forever ──────────────────
+        // ── Option 2: Skip video ads ($1.99) ──────────────────
         _OptionCard(
-          icon: Icons.all_inclusive_rounded,
+          icon: Icons.skip_next_rounded,
           iconColor: AppColors.accent,
-          title: 'Skip ads forever',
-          subtitle: 'One-time purchase \$1.99',
+          title: 'Skip video ads',
+          subtitle: 'Instant PDF export  \$1.99',
           trailing: const Icon(Icons.arrow_forward_rounded, color: AppColors.accent, size: 20),
           enabled: true,
-          onTap: _purchase,
+          onTap: _purchasePdf,
+          highlight: false,
+        ),
+        const SizedBox(height: 12),
+
+        // ── Option 3: Remove ALL ads ($3.99) ──────────────────
+        _OptionCard(
+          icon: Icons.all_inclusive_rounded,
+          iconColor: const Color(0xFF7C3AED),
+          title: 'Remove all ads',
+          subtitle: 'No banners, no videos  \$3.99',
+          trailing: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF7C3AED), size: 20),
+          enabled: true,
+          onTap: _purchaseRemoveAds,
           highlight: false,
         ),
         const SizedBox(height: 8),
