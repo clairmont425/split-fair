@@ -105,8 +105,34 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   String _buildShareText(List<SplitResult> results, double total) {
-    final lines = results.map((r) => '${r.room.tenant} (${r.room.name}): \$${r.amount.toStringAsFixed(2)} (${(r.percentage * 100).toStringAsFixed(1)}%)').join('\n');
-    return 'Fair Rent Split — Total \$${total.toStringAsFixed(2)}\n\n$lines\n\nCalculated with Split Fair';
+    final buf = StringBuffer();
+    buf.writeln('Fair Rent Split — Total \$${total.toStringAsFixed(2)}');
+    buf.writeln();
+    buf.writeln('── Each person pays ──');
+    for (final r in results) {
+      buf.writeln('${r.room.tenant} (${r.room.name}): '
+          '\$${r.amount.toStringAsFixed(2)} '
+          '(${(r.percentage * 100).toStringAsFixed(1)}%)');
+    }
+    buf.writeln();
+    buf.writeln('── Why these amounts? ──');
+    for (var i = 0; i < results.length; i++) {
+      final r = results[i];
+      final items = PdfService.scoreItems(r.room);
+      buf.writeln();
+      buf.writeln('${r.room.tenant} — ${r.room.name} '
+          '(${r.score.toStringAsFixed(0)} pts → \$${r.amount.toStringAsFixed(2)})');
+      for (final it in items) {
+        final pts = it.$2;
+        final ptsStr = pts % 1 == 0
+            ? pts.toInt().toString()
+            : pts.toStringAsFixed(1);
+        buf.writeln('  • ${it.$1}: +$ptsStr pts');
+      }
+    }
+    buf.writeln();
+    buf.writeln('Calculated with Split Fair');
+    return buf.toString();
   }
 
   void _shareText(BuildContext context, List<SplitResult> results, double total) {

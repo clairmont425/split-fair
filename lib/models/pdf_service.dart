@@ -1,9 +1,23 @@
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'room.dart';
 import 'split_result.dart';
 
 class PdfService {
+  static const _green = PdfColor.fromInt(0xFF00694C);
+  static const _greenDark = PdfColor.fromInt(0xFF004D38);
+  static const _greenLight = PdfColor.fromInt(0xFFE1F5EE);
+  // Same accent palette as AppColors.roomColors in the app.
+  static const _roomColors = <PdfColor>[
+    PdfColor.fromInt(0xFF00694C), // primary green
+    PdfColor.fromInt(0xFF378ADD), // blue
+    PdfColor.fromInt(0xFFD4537E), // pink
+    PdfColor.fromInt(0xFF855400), // accent brown/gold
+    PdfColor.fromInt(0xFF6B4FBB), // purple
+    PdfColor.fromInt(0xFFEA4335), // red
+  ];
+
   static Future<Uint8List> generateSplitPdf({
     required List<SplitResult> results,
     required double totalRent,
@@ -11,67 +25,395 @@ class PdfService {
   }) async {
     final pdf = pw.Document();
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.letter,
-        margin: const pw.EdgeInsets.all(48),
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+        margin: const pw.EdgeInsets.all(40),
+        header: (ctx) => ctx.pageNumber == 1 ? pw.SizedBox() : _runningHeader(),
+        footer: (ctx) => pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 10),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                    pw.Text('Split Fair', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF00694C))),
-                    pw.Text('Fair Rent Calculation', style: pw.TextStyle(fontSize: 14, color: PdfColors.grey600)),
-                  ]),
-                  pw.Text(_formatDate(DateTime.now()), style: pw.TextStyle(fontSize: 11)),
-                ],
-              ),
-              pw.SizedBox(height: 6),
-              pw.Divider(color: const PdfColor.fromInt(0xFF00694C), thickness: 2),
-              pw.SizedBox(height: 24),
-              pw.Container(
-                padding: const pw.EdgeInsets.all(20),
-                decoration: pw.BoxDecoration(color: const PdfColor.fromInt(0xFFE1F5EE), borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12))),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Total Monthly Rent', style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
-                    pw.Text('\$${totalRent.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF004D38))),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 28),
-              pw.Table(
-                border: pw.TableBorder(bottom: const pw.BorderSide(color: PdfColors.grey300), horizontalInside: const pw.BorderSide(color: PdfColors.grey200)),
-                columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(1.5)},
-                children: [
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.grey100),
-                    children: ['Tenant', 'Room', 'Share', 'Amount'].map((h) =>
-                      pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                        child: pw.Text(h, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)))).toList(),
-                  ),
-                  ...results.map((r) => pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text(r.room.tenant, style: const pw.TextStyle(fontSize: 13))),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text('${r.room.name}\n${r.room.sqft.toInt()} sqft', style: const pw.TextStyle(fontSize: 11))),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text('${(r.percentage * 100).toStringAsFixed(1)}%', style: const pw.TextStyle(fontSize: 13))),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text('\$${r.amount.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF00694C)))),
-                  ])),
-                ],
-              ),
-              pw.Spacer(),
-              pw.Divider(color: PdfColors.grey300),
-              pw.SizedBox(height: 8),
-              pw.Text('Generated by Split Fair', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey400)),
+              pw.Text('Generated by Split Fair',
+                  style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
+              pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+                  style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
             ],
-          );
-        },
+          ),
+        ),
+        build: (ctx) => [
+          _titleBlock(address),
+          pw.SizedBox(height: 14),
+          _totalRentBanner(totalRent),
+          pw.SizedBox(height: 22),
+          _summaryTable(results),
+          pw.SizedBox(height: 24),
+          _sectionHeader('Room breakdowns'),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'Each room\'s share of the rent is based on a total score built '
+            'from square footage, amenities, quality, and any custom features. '
+            'Here\'s exactly how each score was calculated.',
+            style: pw.TextStyle(fontSize: 10.5, color: PdfColors.grey700, lineSpacing: 2),
+          ),
+          pw.SizedBox(height: 14),
+          ...results.asMap().entries.map((e) {
+            final color = _roomColors[e.key % _roomColors.length];
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 14),
+              child: _roomBreakdownCard(e.value, color, totalRent),
+            );
+          }),
+          pw.SizedBox(height: 6),
+          _scoringLegend(),
+        ],
       ),
     );
     return pdf.save();
   }
+
+  // ── Building blocks ──────────────────────────────────────────────────────
+
+  static pw.Widget _runningHeader() => pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 12),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Split Fair',
+                style: pw.TextStyle(
+                    fontSize: 12, fontWeight: pw.FontWeight.bold, color: _green)),
+            pw.Text('Fair rent calculation',
+                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+          ],
+        ),
+      );
+
+  static pw.Widget _titleBlock(String? address) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                pw.Text('Split Fair',
+                    style: pw.TextStyle(
+                        fontSize: 28, fontWeight: pw.FontWeight.bold, color: _green)),
+                pw.Text('Fair rent calculation',
+                    style: pw.TextStyle(fontSize: 13, color: PdfColors.grey600)),
+                if (address != null && address.isNotEmpty) ...[
+                  pw.SizedBox(height: 4),
+                  pw.Text(address,
+                      style: pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
+                ],
+              ]),
+              pw.Text(_formatDate(DateTime.now()),
+                  style: pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          pw.Divider(color: _green, thickness: 2),
+        ],
+      );
+
+  static pw.Widget _totalRentBanner(double totalRent) => pw.Container(
+        padding: const pw.EdgeInsets.all(18),
+        decoration: pw.BoxDecoration(
+          color: _greenLight,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+        ),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Total monthly rent',
+                style: pw.TextStyle(fontSize: 13, color: PdfColors.grey700)),
+            pw.Text('\$${totalRent.toStringAsFixed(2)}',
+                style: pw.TextStyle(
+                    fontSize: 24, fontWeight: pw.FontWeight.bold, color: _greenDark)),
+          ],
+        ),
+      );
+
+  static pw.Widget _sectionHeader(String label) => pw.Row(children: [
+        pw.Container(width: 3, height: 16, color: _green),
+        pw.SizedBox(width: 8),
+        pw.Text(label,
+            style: pw.TextStyle(
+                fontSize: 15, fontWeight: pw.FontWeight.bold, color: _greenDark)),
+      ]);
+
+  static pw.Widget _summaryTable(List<SplitResult> results) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _sectionHeader('Summary'),
+          pw.SizedBox(height: 10),
+          pw.Table(
+            border: pw.TableBorder(
+              bottom: const pw.BorderSide(color: PdfColors.grey300),
+              horizontalInside: const pw.BorderSide(color: PdfColors.grey200),
+            ),
+            columnWidths: {
+              0: const pw.FlexColumnWidth(2),
+              1: const pw.FlexColumnWidth(1.8),
+              2: const pw.FlexColumnWidth(1),
+              3: const pw.FlexColumnWidth(1),
+              4: const pw.FlexColumnWidth(1.3),
+            },
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                children: ['Tenant', 'Room', 'Score', 'Share', 'Amount']
+                    .map((h) => pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 9),
+                          child: pw.Text(h,
+                              style: pw.TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColors.grey700)),
+                        ))
+                    .toList(),
+              ),
+              ...results.asMap().entries.map((e) {
+                final r = e.value;
+                final color = _roomColors[e.key % _roomColors.length];
+                return pw.TableRow(children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 11),
+                    child: pw.Row(children: [
+                      pw.Container(
+                          width: 8,
+                          height: 8,
+                          decoration:
+                              pw.BoxDecoration(color: color, shape: pw.BoxShape.circle)),
+                      pw.SizedBox(width: 8),
+                      pw.Text(r.room.tenant,
+                          style: const pw.TextStyle(fontSize: 12)),
+                    ]),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 11),
+                    child: pw.Text('${r.room.name}\n${r.room.sqft.toInt()} sqft',
+                        style: const pw.TextStyle(fontSize: 10.5)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 11),
+                    child: pw.Text(r.score.toStringAsFixed(0),
+                        style: const pw.TextStyle(fontSize: 11)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 11),
+                    child: pw.Text('${(r.percentage * 100).toStringAsFixed(1)}%',
+                        style: const pw.TextStyle(fontSize: 11)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 11),
+                    child: pw.Text('\$${r.amount.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: pw.FontWeight.bold,
+                            color: _green)),
+                  ),
+                ]);
+              }),
+            ],
+          ),
+        ],
+      );
+
+  static pw.Widget _roomBreakdownCard(
+      SplitResult r, PdfColor color, double totalRent) {
+    final items = _buildScoreItems(r.room);
+    final total = r.score;
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+        border: pw.Border.all(color: PdfColors.grey300),
+      ),
+      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        // Colored header strip
+        pw.Container(
+          padding: const pw.EdgeInsets.fromLTRB(14, 10, 14, 10),
+          decoration: pw.BoxDecoration(
+            color: color,
+            borderRadius: const pw.BorderRadius.only(
+              topLeft: pw.Radius.circular(10),
+              topRight: pw.Radius.circular(10),
+            ),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                pw.Text(r.room.tenant,
+                    style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.white)),
+                pw.Text('${r.room.name} · ${r.room.sqft.toInt()} sqft',
+                    style: pw.TextStyle(
+                        fontSize: 10.5, color: PdfColor.fromInt(0xCCFFFFFF))),
+              ]),
+              pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+                pw.Text('\$${r.amount.toStringAsFixed(2)}',
+                    style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.white)),
+                pw.Text(
+                    '${(r.percentage * 100).toStringAsFixed(1)}% · ${total.toStringAsFixed(0)} pts',
+                    style: pw.TextStyle(
+                        fontSize: 10, color: PdfColor.fromInt(0xCCFFFFFF))),
+              ]),
+            ],
+          ),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.fromLTRB(14, 12, 14, 14),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Why \$${r.amount.toStringAsFixed(0)}?',
+                  style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey700)),
+              pw.SizedBox(height: 8),
+              ...items.map((it) => _scoreRow(it.$1, it.$2, total, color)),
+              pw.SizedBox(height: 8),
+              pw.Container(
+                padding:
+                    const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey100,
+                  borderRadius:
+                      const pw.BorderRadius.all(pw.Radius.circular(6)),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Total score',
+                        style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey800)),
+                    pw.Text('${total.toStringAsFixed(0)} pts',
+                        style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                            color: color)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  static pw.Widget _scoreRow(
+      String label, double pts, double totalScore, PdfColor color) {
+    final fraction =
+        totalScore > 0 ? (pts / totalScore).clamp(0.0, 1.0) : 0.0;
+    final ptsStr =
+        pts % 1 == 0 ? pts.toInt().toString() : pts.toStringAsFixed(1);
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        pw.Row(children: [
+          pw.Expanded(
+            child: pw.Text(label,
+                style: pw.TextStyle(fontSize: 10.5, color: PdfColors.grey800)),
+          ),
+          pw.Text('+$ptsStr pts',
+              style: pw.TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.grey800)),
+        ]),
+        pw.SizedBox(height: 3),
+        pw.ClipRRect(
+          horizontalRadius: 2,
+          verticalRadius: 2,
+          child: pw.Container(
+            height: 4,
+            color: PdfColors.grey200,
+            child: pw.Row(children: [
+              pw.Expanded(
+                flex: (fraction * 1000).round().clamp(0, 1000),
+                child: pw.Container(color: color),
+              ),
+              pw.Expanded(
+                flex: ((1 - fraction) * 1000).round().clamp(0, 1000),
+                child: pw.SizedBox(),
+              ),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  static pw.Widget _scoringLegend() => pw.Container(
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          color: _greenLight,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+        ),
+        child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+          pw.Text('How scoring works',
+              style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _greenDark)),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'Square footage: 1 pt / sqft · Private bath: +40 · Parking: +30 · '
+            'Balcony: +20 · Walk-in closet: +15 · A/C: +10 · Upper-floor bonus: up to +12. '
+            'Quality (x/10): light ×3, quietness ×2, storage ×1.5. '
+            'Custom features use the points you assigned.',
+            style: pw.TextStyle(
+                fontSize: 9.5, color: _greenDark, lineSpacing: 1.8),
+          ),
+        ]),
+      );
+
+  // ── Score itemization shared with share-text + PDF ───────────────────────
+
+  /// Returns (label, points) pairs representing every component of a room's
+  /// score. Mirrors ScoreBreakdown.buildItems for parity with the UI.
+  static List<(String, double)> _buildScoreItems(Room room) {
+    final items = <(String, double)>[];
+    items.add(('${room.sqft.toInt()} sqft × 1 pt', room.sqft));
+    if (room.hasPrivateBath) items.add(('Private bathroom', 40));
+    if (room.hasParking) items.add(('Parking spot', 30));
+    if (room.hasBalcony) items.add(('Balcony / patio', 20));
+    if (room.hasWalkInCloset) items.add(('Walk-in closet', 15));
+    if (room.hasAC) items.add(('A/C unit', 10));
+    for (final f in room.customFeatures) {
+      if (f.enabled) items.add((f.name, f.points.toDouble()));
+    }
+    if (room.floorLevel > 0) {
+      final bonus = (room.floorLevel * 2).clamp(0, 12).toDouble();
+      items.add(('Floor ${room.floorLevel} bonus', bonus));
+    }
+    items.add(
+        ('Natural light (${room.naturalLightScore.toInt()}/10)', room.naturalLightScore * 3));
+    items.add(('Quietness (${room.noiseScore.toInt()}/10)', room.noiseScore * 2));
+    items.add(('Storage space (${room.storageScore.toInt()}/10)', room.storageScore * 1.5));
+    return items;
+  }
+
+  /// Public wrapper so ResultsScreen can reuse exact same items for share text.
+  static List<(String, double)> scoreItems(Room room) => _buildScoreItems(room);
 
   static String _formatDate(DateTime d) => '${d.month}/${d.day}/${d.year}';
 }
