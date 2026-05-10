@@ -1,6 +1,6 @@
 name: rent_split
 description: Fair rent splitting calculator for roommates.
-version: 1.1.8+106
+version: 1.1.9+107
 publish_to: 'none'
 
 environment:
@@ -22,6 +22,7 @@ dependencies:
   uuid: ^4.3.3
   package_info_plus: ^8.0.0
   google_mobile_ads: ^5.1.0
+  in_app_review: ^2.0.10
 
 dev_dependencies:
   flutter_test:
