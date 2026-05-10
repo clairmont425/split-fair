@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../models/app_state.dart';
+import '../models/review_service.dart';
 import '../models/room.dart';
 import '../theme/app_images.dart';
 import '../theme/app_theme.dart';
@@ -716,6 +717,13 @@ class _SettingsTab extends StatelessWidget {
                   context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
                   builder: (_) => const _ScoringExplainerSheet(),
                 ),
+              ),
+              _SettingsTile(
+                icon: Icons.star_rounded,
+                iconColor: const Color(0xFFE8B339),
+                title: 'Rate Split Fair',
+                subtitle: 'If Split Fair settled the rent fight, leave a quick rating.',
+                onTap: () => ReviewService.openStoreListing(),
               ),
             ],
           ),

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/app_state.dart';
 import '../models/pdf_service.dart';
+import '../models/review_service.dart';
 import '../models/room.dart';
 import '../models/split_result.dart';
 import '../theme/app_theme.dart';
@@ -28,7 +29,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AppState>().autoSaveResult();
+      if (!mounted) return;
+      context.read<AppState>().autoSaveResult();
+      // Wait a beat so the user actually sees the result before any prompt.
+      Future.delayed(const Duration(seconds: 3), () {
+        if (!mounted) return;
+        ReviewService.requestReviewIfAppropriate();
+      });
     });
   }
 
